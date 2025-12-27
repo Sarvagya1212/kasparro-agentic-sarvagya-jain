@@ -26,7 +26,9 @@ class ContentTemplate(ABC):
         """
         pass
 
-    def validate_required_fields(self, data: Dict[str, Any], required_fields: list) -> None:
+    def validate_required_fields(
+        self, data: Dict[str, Any], required_fields: list
+    ) -> None:
         """
         Validate that all required fields are present in data.
 

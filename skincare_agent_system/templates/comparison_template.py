@@ -64,6 +64,8 @@ class ComparisonTemplate(ContentTemplate):
             "comparison_with": other.get("name", ""),
             "comparison_table": comparison_table,
             "differences": data.get("differences", []),
-            "recommendation": data.get("recommendation", "Both products have their merits"),
+            "recommendation": data.get(
+                "recommendation", "Both products have their merits"
+            ),
             "winner_categories": data.get("winner_categories", {}),
         }

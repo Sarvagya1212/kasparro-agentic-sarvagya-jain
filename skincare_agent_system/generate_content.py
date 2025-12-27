@@ -71,7 +71,9 @@ def generate_faq_page(product_data: dict, output_path: str = "output/faq.json"):
     return output
 
 
-def generate_product_page(product_data: dict, output_path: str = "output/product_page.json"):
+def generate_product_page(
+    product_data: dict, output_path: str = "output/product_page.json"
+):
     """
     Generate product page using benefits/usage logic blocks and product template.
 
@@ -199,7 +201,9 @@ def main():
     # Generate all 3 pages
     faq_output = generate_faq_page(GLOWBOOST_PRODUCT)
     product_output = generate_product_page(GLOWBOOST_PRODUCT)
-    comparison_output = generate_comparison_page(GLOWBOOST_PRODUCT, RADIANCE_PLUS_PRODUCT)
+    comparison_output = generate_comparison_page(
+        GLOWBOOST_PRODUCT, RADIANCE_PLUS_PRODUCT
+    )
 
     # Summary
     print("\n" + "=" * 70)

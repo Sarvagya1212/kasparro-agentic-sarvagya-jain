@@ -41,7 +41,9 @@ def generate_questions_by_category(
     return questions[:min_questions] if len(questions) > min_questions else questions
 
 
-def _generate_informational_questions(product_data: Dict[str, Any]) -> List[Tuple[str, str, str]]:
+def _generate_informational_questions(
+    product_data: Dict[str, Any]
+) -> List[Tuple[str, str, str]]:
     """Generate informational questions."""
     questions = []
     name = product_data.get("name", "this product")
@@ -49,7 +51,11 @@ def _generate_informational_questions(product_data: Dict[str, Any]) -> List[Tupl
     # What is this product?
     category = product_data.get("category", "skincare product")
     questions.append(
-        (f"What is {name}?", f"{name} is a {category} designed for skincare.", "Informational")
+        (
+            f"What is {name}?",
+            f"{name} is a {category} designed for skincare.",
+            "Informational",
+        )
     )
 
     # Key ingredients
@@ -76,7 +82,9 @@ def _generate_informational_questions(product_data: Dict[str, Any]) -> List[Tupl
     return questions
 
 
-def _generate_usage_questions(product_data: Dict[str, Any]) -> List[Tuple[str, str, str]]:
+def _generate_usage_questions(
+    product_data: Dict[str, Any]
+) -> List[Tuple[str, str, str]]:
     """Generate usage questions."""
     questions = []
     name = product_data.get("name", "this product")
@@ -105,13 +113,17 @@ def _generate_usage_questions(product_data: Dict[str, Any]) -> List[Tuple[str, s
     return questions
 
 
-def _generate_safety_questions(product_data: Dict[str, Any]) -> List[Tuple[str, str, str]]:
+def _generate_safety_questions(
+    product_data: Dict[str, Any]
+) -> List[Tuple[str, str, str]]:
     """Generate safety questions."""
     questions = []
     name = product_data.get("name", "this product")
     side_effects = product_data.get("side_effects", "None reported")
 
-    questions.append((f"Are there any side effects of using {name}?", side_effects, "Safety"))
+    questions.append(
+        (f"Are there any side effects of using {name}?", side_effects, "Safety")
+    )
 
     # Skin type suitability
     skin_types = product_data.get("skin_types", [])
@@ -136,13 +148,17 @@ def _generate_safety_questions(product_data: Dict[str, Any]) -> List[Tuple[str, 
     return questions
 
 
-def _generate_purchase_questions(product_data: Dict[str, Any]) -> List[Tuple[str, str, str]]:
+def _generate_purchase_questions(
+    product_data: Dict[str, Any]
+) -> List[Tuple[str, str, str]]:
     """Generate purchase-related questions."""
     questions = []
     name = product_data.get("name", "this product")
     price = product_data.get("price", 0)
 
-    questions.append((f"How much does {name} cost?", f"The price is ₹{price}.", "Purchase"))
+    questions.append(
+        (f"How much does {name} cost?", f"The price is ₹{price}.", "Purchase")
+    )
 
     # Size
     if "size" in product_data:
@@ -166,7 +182,9 @@ def _generate_purchase_questions(product_data: Dict[str, Any]) -> List[Tuple[str
     return questions
 
 
-def _generate_comparison_questions(product_data: Dict[str, Any]) -> List[Tuple[str, str, str]]:
+def _generate_comparison_questions(
+    product_data: Dict[str, Any]
+) -> List[Tuple[str, str, str]]:
     """Generate comparison questions."""
     questions = []
     name = product_data.get("name", "this product")
@@ -190,7 +208,9 @@ def _generate_comparison_questions(product_data: Dict[str, Any]) -> List[Tuple[s
     return questions
 
 
-def _generate_results_questions(product_data: Dict[str, Any]) -> List[Tuple[str, str, str]]:
+def _generate_results_questions(
+    product_data: Dict[str, Any]
+) -> List[Tuple[str, str, str]]:
     """Generate results-related questions."""
     questions = []
     name = product_data.get("name", "this product")

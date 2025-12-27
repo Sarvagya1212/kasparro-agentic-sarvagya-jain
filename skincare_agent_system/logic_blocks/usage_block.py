@@ -94,7 +94,9 @@ def generate_timing_recommendation(product_data: Dict[str, Any]) -> str:
         return "Morning only"
 
     # AHAs/BHAs - typically PM
-    if any(acid in " ".join(ingredients) for acid in ["salicylic", "glycolic", "lactic"]):
+    if any(
+        acid in " ".join(ingredients) for acid in ["salicylic", "glycolic", "lactic"]
+    ):
         return "Evening preferred"
 
     # Default

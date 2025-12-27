@@ -93,11 +93,15 @@ def categorize_benefits(benefits: List[str]) -> Dict[str, List[str]]:
             categories["hydration"].append(benefit)
         elif any(word in benefit_lower for word in ["aging", "wrinkle", "fine line"]):
             categories["anti_aging"].append(benefit)
-        elif any(word in benefit_lower for word in ["bright", "dark spot", "even tone"]):
+        elif any(
+            word in benefit_lower for word in ["bright", "dark spot", "even tone"]
+        ):
             categories["brightening"].append(benefit)
         elif any(word in benefit_lower for word in ["acne", "pore", "exfoliat"]):
             categories["treatment"].append(benefit)
-        elif any(word in benefit_lower for word in ["protect", "antioxidant", "barrier"]):
+        elif any(
+            word in benefit_lower for word in ["protect", "antioxidant", "barrier"]
+        ):
             categories["protection"].append(benefit)
 
     # Remove empty categories
