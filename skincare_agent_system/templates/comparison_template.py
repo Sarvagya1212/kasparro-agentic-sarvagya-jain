@@ -2,7 +2,8 @@
 Comparison Template - Structures product comparison into JSON format.
 """
 
-from typing import Dict, Any
+from typing import Any, Dict
+
 from .base_template import ContentTemplate
 
 
@@ -64,6 +65,8 @@ class ComparisonTemplate(ContentTemplate):
             "comparison_with": other.get("name", ""),
             "comparison_table": comparison_table,
             "differences": data.get("differences", []),
-            "recommendation": data.get("recommendation", "Both products have their merits"),
+            "recommendation": data.get(
+                "recommendation", "Both products have their merits"
+            ),
             "winner_categories": data.get("winner_categories", {}),
         }

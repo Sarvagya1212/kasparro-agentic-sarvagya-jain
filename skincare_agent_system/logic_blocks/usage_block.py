@@ -2,7 +2,7 @@
 Usage Block - Reusable logic for extracting and formatting usage instructions.
 """
 
-from typing import List, Dict, Any
+from typing import Any, Dict, List
 
 
 def extract_usage_instructions(product_data: Dict[str, Any]) -> str:
@@ -94,7 +94,9 @@ def generate_timing_recommendation(product_data: Dict[str, Any]) -> str:
         return "Morning only"
 
     # AHAs/BHAs - typically PM
-    if any(acid in " ".join(ingredients) for acid in ["salicylic", "glycolic", "lactic"]):
+    if any(
+        acid in " ".join(ingredients) for acid in ["salicylic", "glycolic", "lactic"]
+    ):
         return "Evening preferred"
 
     # Default

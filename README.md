@@ -1,8 +1,9 @@
 # Kasparro AI - Multi-Agent Content Generation System
 
-[![CI/CD](https://github.com/yourusername/kasparro-ai-agentic-content-generation-system/actions/workflows/ci.yml/badge.svg)](https://github.com/yourusername/kasparro-ai-agentic-content-generation-system/actions)
+[![CI/CD Pipeline](https://github.com/Sarvagya1212/kasparro-agentic-sarvagya-jain/actions/workflows/ci.yml/badge.svg)](https://github.com/Sarvagya1212/kasparro-agentic-sarvagya-jain/actions/workflows/ci.yml)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
 > **Applied AI Engineer Assignment** - Multi-Agent Content Generation System
 
@@ -12,8 +13,8 @@ A production-ready, modular agentic automation system that generates structured,
 
 Transforms product data → Structured JSON content pages
 
-**Input:** GlowBoost Vitamin C Serum product data  
-**Output:** 3 JSON files (FAQ, Product Page, Comparison)  
+**Input:** GlowBoost Vitamin C Serum product data
+**Output:** 3 JSON files (FAQ, Product Page, Comparison)
 **Method:** Logic blocks + Templates (NOT LLM prompts)
 
 ## ✨ Key Features
@@ -33,7 +34,7 @@ Transforms product data → Structured JSON content pages
 ```bash
 # Clone repository
 git clone https://github.com/yourusername/kasparro-ai-agentic-content-generation-system.git
-cd kasparro-ai-agentic-content-generation-system
+cd kasparro-content-generation
 
 # Install dependencies (optional - for testing)
 pip install -r requirements.txt
@@ -48,7 +49,7 @@ python skincare_agent_system/generate_content.py
 **Output:**
 ```
 ✓ Generated 15 questions → output/faq.json
-✓ Generated product page → output/product_page.json  
+✓ Generated product page → output/product_page.json
 ✓ Generated comparison → output/comparison_page.json
 ```
 
@@ -77,7 +78,7 @@ python skincare_agent_system/generate_content.py
 
 **Logic Blocks** (`logic_blocks/`)
 - `benefits_block.py` - Extract and format benefits
-- `usage_block.py` - Extract and format usage instructions  
+- `usage_block.py` - Extract and format usage instructions
 - `comparison_block.py` - Compare products (ingredients, price, benefits)
 - `question_generator.py` - Generate 15+ categorized FAQ questions
 
@@ -154,7 +155,7 @@ pytest tests/test_pipeline.py -v
 
 **Test Coverage:**
 - ✅ Logic blocks unit tests
-- ✅ Template unit tests  
+- ✅ Template unit tests
 - ✅ Integration tests
 - ✅ Pipeline end-to-end tests
 
@@ -196,7 +197,7 @@ kasparro-content-generation/
 ### 1. No LLM Prompting
 This is **NOT** a prompting system. Content is generated through:
 - Rule-based logic blocks
-- Template-based rendering  
+- Template-based rendering
 - Deterministic transformations
 
 ### 2. Clear Agent Boundaries
@@ -269,12 +270,12 @@ MIT License - See LICENSE file for details
 
 ## 👤 Author
 
-**[Your Name]**  
-Applied AI Engineer Assignment  
+**[Your Name]**
+Applied AI Engineer Assignment
 Kasparro
 
 ---
 
-**Assignment:** Multi-Agent Content Generation System  
-**Status:** ✅ Complete - Production Ready  
+**Assignment:** Multi-Agent Content Generation System
+**Status:** ✅ Complete - Production Ready
 **Score:** 97/100 - Strong Pass

@@ -9,7 +9,7 @@ from pathlib import Path
 # Add parent directory to path to allow imports
 sys.path.insert(0, str(Path(__file__).parent))
 
-from generate_content import main as run_pipeline
+from generate_content import main as run_pipeline  # noqa: E402
 
 
 def main():

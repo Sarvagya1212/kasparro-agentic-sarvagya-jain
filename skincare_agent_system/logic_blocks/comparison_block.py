@@ -2,10 +2,12 @@
 Comparison Block - Reusable logic for comparing products.
 """
 
-from typing import Dict, Any, List, Tuple
+from typing import Any, Dict, List
 
 
-def compare_ingredients(product_a: Dict[str, Any], product_b: Dict[str, Any]) -> Dict[str, Any]:
+def compare_ingredients(
+    product_a: Dict[str, Any], product_b: Dict[str, Any]
+) -> Dict[str, Any]:
     """
     Compare ingredients between two products.
 
@@ -31,7 +33,9 @@ def compare_ingredients(product_a: Dict[str, Any], product_b: Dict[str, Any]) ->
     }
 
 
-def compare_prices(product_a: Dict[str, Any], product_b: Dict[str, Any]) -> Dict[str, Any]:
+def compare_prices(
+    product_a: Dict[str, Any], product_b: Dict[str, Any]
+) -> Dict[str, Any]:
     """
     Compare prices and value between two products.
 
@@ -46,7 +50,9 @@ def compare_prices(product_a: Dict[str, Any], product_b: Dict[str, Any]) -> Dict
     price_b = product_b.get("price", 0)
 
     difference = abs(price_a - price_b)
-    percentage_diff = (difference / max(price_a, price_b)) * 100 if max(price_a, price_b) > 0 else 0
+    percentage_diff = (
+        (difference / max(price_a, price_b)) * 100 if max(price_a, price_b) > 0 else 0
+    )
 
     cheaper = (
         product_a.get("name", "Product A")
@@ -64,7 +70,9 @@ def compare_prices(product_a: Dict[str, Any], product_b: Dict[str, Any]) -> Dict
     }
 
 
-def compare_benefits(product_a: Dict[str, Any], product_b: Dict[str, Any]) -> Dict[str, Any]:
+def compare_benefits(
+    product_a: Dict[str, Any], product_b: Dict[str, Any]
+) -> Dict[str, Any]:
     """
     Compare benefits between two products.
 
@@ -156,7 +164,9 @@ def extract_concentration_value(concentration_str: str) -> float:
     return float(match.group(1)) if match else 0.0
 
 
-def generate_recommendation(product_a: Dict[str, Any], product_b: Dict[str, Any]) -> str:
+def generate_recommendation(
+    product_a: Dict[str, Any], product_b: Dict[str, Any]
+) -> str:
     """
     Generate overall recommendation based on comparison.
 
@@ -173,6 +183,13 @@ def generate_recommendation(product_a: Dict[str, Any], product_b: Dict[str, Any]
     price_comp = compare_prices(product_a, product_b)
 
     if price_comp["cheaper_product"] == name_a:
-        return f"For budget-conscious buyers, {name_a} offers excellent value. However, {name_b} may provide additional benefits worth the premium."
+        return (
+            f"For budget-conscious buyers, {name_a} offers excellent "
+            f"value. However, {name_b} may provide additional benefits "
+            f"worth the premium."
+        )
     else:
-        return f"{name_a} is the premium option with comprehensive benefits, while {name_b} offers great value for those on a budget."
+        return (
+            f"{name_a} is the premium option with comprehensive benefits, "
+            f"while {name_b} offers great value for those on a budget."
+        )

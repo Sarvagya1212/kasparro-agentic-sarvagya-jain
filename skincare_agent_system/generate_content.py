@@ -5,26 +5,27 @@ This demonstrates the full agentic automation system.
 
 import json
 import sys
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
 
 # Add to path
 sys.path.insert(0, str(Path(__file__).parent))
 
-from data.products import GLOWBOOST_PRODUCT, RADIANCE_PLUS_PRODUCT
-from templates.faq_template import FAQTemplate
-from templates.product_page_template import ProductPageTemplate
-from templates.comparison_template import ComparisonTemplate
-from logic_blocks.question_generator import generate_questions_by_category
-from logic_blocks.benefits_block import extract_benefits
-from logic_blocks.usage_block import extract_usage_instructions
-from logic_blocks.comparison_block import (
+# Import after path setup
+from data.products import GLOWBOOST_PRODUCT, RADIANCE_PLUS_PRODUCT  # noqa: E402
+from logic_blocks.benefits_block import extract_benefits  # noqa: E402
+from logic_blocks.comparison_block import (  # noqa: E402
+    compare_benefits,
     compare_ingredients,
     compare_prices,
-    compare_benefits,
     determine_winner,
     generate_recommendation,
 )
+from logic_blocks.question_generator import generate_questions_by_category  # noqa: E402
+from logic_blocks.usage_block import extract_usage_instructions  # noqa: E402
+from templates.comparison_template import ComparisonTemplate  # noqa: E402
+from templates.faq_template import FAQTemplate  # noqa: E402
+from templates.product_page_template import ProductPageTemplate  # noqa: E402
 
 
 def generate_faq_page(product_data: dict, output_path: str = "output/faq.json"):
@@ -71,7 +72,9 @@ def generate_faq_page(product_data: dict, output_path: str = "output/faq.json"):
     return output
 
 
-def generate_product_page(product_data: dict, output_path: str = "output/product_page.json"):
+def generate_product_page(
+    product_data: dict, output_path: str = "output/product_page.json"
+):
     """
     Generate product page using benefits/usage logic blocks and product template.
 
@@ -150,8 +153,11 @@ def generate_comparison_page(
         },
         {
             "aspect": "Price",
-            "details": f"₹{price_comp['difference']} difference ({price_comp['percentage_difference']}%). "
-            f"{price_comp['cheaper_product']} is more affordable.",
+            "details": (
+                f"₹{price_comp['difference']} difference "
+                f"({price_comp['percentage_difference']}%). "
+                f"{price_comp['cheaper_product']} is more affordable."
+            ),
         },
         {
             "aspect": "Benefits",
@@ -197,9 +203,9 @@ def main():
     print("\nPipeline: Data → Logic Blocks → Templates → JSON Output")
 
     # Generate all 3 pages
-    faq_output = generate_faq_page(GLOWBOOST_PRODUCT)
-    product_output = generate_product_page(GLOWBOOST_PRODUCT)
-    comparison_output = generate_comparison_page(GLOWBOOST_PRODUCT, RADIANCE_PLUS_PRODUCT)
+    generate_faq_page(GLOWBOOST_PRODUCT)
+    generate_product_page(GLOWBOOST_PRODUCT)
+    generate_comparison_page(GLOWBOOST_PRODUCT, RADIANCE_PLUS_PRODUCT)
 
     # Summary
     print("\n" + "=" * 70)

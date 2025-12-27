@@ -2,7 +2,8 @@
 FAQ Template - Structures FAQ content into JSON format.
 """
 
-from typing import Dict, Any, List
+from typing import Any, Dict
+
 from .base_template import ContentTemplate
 
 

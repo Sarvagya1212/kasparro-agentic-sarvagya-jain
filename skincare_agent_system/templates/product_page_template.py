@@ -2,7 +2,8 @@
 Product Page Template - Structures product information into JSON format.
 """
 
-from typing import Dict, Any
+from typing import Any, Dict
+
 from .base_template import ContentTemplate
 
 

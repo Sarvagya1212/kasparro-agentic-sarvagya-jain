@@ -3,9 +3,9 @@ Content Generation System - Orchestrator for the multi-agent content generation 
 This module provides a high-level interface to the content generation pipeline.
 """
 
-from typing import Dict, Any
-from pathlib import Path
 import json
+from pathlib import Path
+from typing import Any, Dict
 
 
 class ContentGenerationSystem:
@@ -29,12 +29,12 @@ class ContentGenerationSystem:
         Returns:
             Dictionary mapping content type to output file path
         """
+        from data.products import RADIANCE_PLUS_PRODUCT
         from generate_content import (
+            generate_comparison_page,
             generate_faq_page,
             generate_product_page,
-            generate_comparison_page,
         )
-        from data.products import RADIANCE_PLUS_PRODUCT
 
         outputs = {}
 
