@@ -2,6 +2,7 @@
 Main entry point for the Skincare Content Generation System.
 Demonstrates all system capabilities with examples.
 """
+
 import sys
 from pathlib import Path
 
@@ -15,12 +16,12 @@ def main():
     """
     Main entry point - runs the content generation pipeline.
     """
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("SKINCARE CONTENT GENERATION SYSTEM")
-    print("="*70)
+    print("=" * 70)
     print("\nRunning content generation pipeline...")
     print("This will generate 3 JSON files using logic blocks and templates.\n")
-    
+
     # Run the pipeline
     run_pipeline()
 

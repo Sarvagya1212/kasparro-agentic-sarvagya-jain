@@ -16,7 +16,7 @@ GLOWBOOST_PRODUCT = {
     "side_effects": "Mild tingling for sensitive skin",
     "price": 699,
     "currency": "INR",
-    "size": "30ml"
+    "size": "30ml",
 }
 
 
@@ -33,5 +33,5 @@ RADIANCE_PLUS_PRODUCT = {
     "side_effects": "May cause slight redness initially",
     "price": 899,
     "currency": "INR",
-    "size": "30ml"
+    "size": "30ml",
 }
