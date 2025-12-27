@@ -1,0 +1,53 @@
+{
+  "comparison_type": "side_by_side",
+  "primary_product": "GlowBoost Vitamin C Serum",
+  "comparison_with": "RadiancePlus Brightening Serum",
+  "comparison_table": [
+    {
+      "attribute": "Product Name",
+      "product_a": "GlowBoost Vitamin C Serum",
+      "product_b": "RadiancePlus Brightening Serum"
+    },
+    {
+      "attribute": "Price",
+      "product_a": "₹699",
+      "product_b": "₹899"
+    },
+    {
+      "attribute": "Key Ingredients",
+      "product_a": "",
+      "product_b": ""
+    },
+    {
+      "attribute": "Skin Types",
+      "product_a": "Oily, Combination",
+      "product_b": "Normal, Dry, Combination"
+    },
+    {
+      "attribute": "Benefits",
+      "product_a": "Brightening, Fades dark spots",
+      "product_b": "Brightening, Anti-aging, Antioxidant protection"
+    }
+  ],
+  "differences": [
+    {
+      "aspect": "Ingredients",
+      "details": "Common: vitamin c. GlowBoost Vitamin C Serum unique: hyaluronic acid. RadiancePlus Brightening Serum unique: ferulic acid, vitamin e."
+    },
+    {
+      "aspect": "Price",
+      "details": "₹200 difference (22.2%). GlowBoost Vitamin C Serum is more affordable."
+    },
+    {
+      "aspect": "Benefits",
+      "details": "Common: brightening. Unique benefits vary between products."
+    }
+  ],
+  "recommendation": "For budget-conscious buyers, GlowBoost Vitamin C Serum offers excellent value. However, RadiancePlus Brightening Serum may provide additional benefits worth the premium.",
+  "winner_categories": {
+    "best_value": "GlowBoost Vitamin C Serum",
+    "most_comprehensive": "RadiancePlus Brightening Serum",
+    "most_benefits": "RadiancePlus Brightening Serum",
+    "higher_concentration": "RadiancePlus Brightening Serum"
+  }
+}
