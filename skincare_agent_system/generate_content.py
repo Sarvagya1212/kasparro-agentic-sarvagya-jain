@@ -11,7 +11,6 @@ from pathlib import Path
 # Add to path
 sys.path.insert(0, str(Path(__file__).parent))
 
-# Import after path setup
 from data.products import GLOWBOOST_PRODUCT, RADIANCE_PLUS_PRODUCT  # noqa: E402
 from logic_blocks.benefits_block import extract_benefits  # noqa: E402
 from logic_blocks.comparison_block import (  # noqa: E402
@@ -147,9 +146,13 @@ def generate_comparison_page(
     differences = [
         {
             "aspect": "Ingredients",
-            "details": f"Common: {', '.join(ingredient_comp['common_ingredients'])}. "
-            f"{product_a['name']} unique: {', '.join(ingredient_comp['unique_to_a'])}. "
-            f"{product_b['name']} unique: {', '.join(ingredient_comp['unique_to_b'])}.",
+            "details": (
+                f"Common: {', '.join(ingredient_comp['common_ingredients'])}. "
+                f"{product_a['name']} unique: "
+                f"{', '.join(ingredient_comp['unique_to_a'])}. "
+                f"{product_b['name']} unique: "
+                f"{', '.join(ingredient_comp['unique_to_b'])}."
+            ),
         },
         {
             "aspect": "Price",
