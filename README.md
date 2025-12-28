@@ -32,8 +32,8 @@ Transforms product data → Structured JSON content pages
 
 ```bash
 # Clone repository
-git clone https://github.com/yourusername/kasparro-ai-agentic-content-generation-system.git
-cd kasparro-ai-agentic-content-generation-system
+git clone https://github.com/Sarvagya1212/kasparro-agentic-sarvagya-jain.git
+cd kasparro-agentic-sarvagya-jain
 
 # Install dependencies (optional - for testing)
 pip install -r requirements.txt
