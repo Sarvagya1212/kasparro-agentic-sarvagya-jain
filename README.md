@@ -1,6 +1,6 @@
 # Kasparro AI - Multi-Agent Content Generation System
 
-[![CI/CD](https://github.com/yourusername/kasparro-ai-agentic-content-generation-system/actions/workflows/ci.yml/badge.svg)](https://github.com/yourusername/kasparro-ai-agentic-content-generation-system/actions)
+[![CI/CD](https://github.com/yourusername/kasparro-ai-agentic-content-generation-system/actions/workflows/ci.yml/badge.svg)](https://github.com/Sarvagya1212/kasparro-agentic-sarvagya-jain/actions)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -269,12 +269,8 @@ MIT License - See LICENSE file for details
 
 ## 👤 Author
 
-**[Your Name]**  
+**Sarvagya Jain**  
 Applied AI Engineer Assignment  
 Kasparro
 
 ---
-
-**Assignment:** Multi-Agent Content Generation System  
-**Status:** ✅ Complete - Production Ready  
-**Score:** 97/100 - Strong Pass
