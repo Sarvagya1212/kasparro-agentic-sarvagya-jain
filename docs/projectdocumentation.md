@@ -1,464 +1,279 @@
-# Skincare Content Generation System - Project Documentation
+# Kasparro Multi-Agent Content Generation System
 
 ## Problem Statement
 
-### The Challenge: Automating Content at Scale
+### The Challenge: Automating Skincare Content at Scale
 
-In the skincare e-commerce industry, creating high-quality, personalized content is a significant challenge:
+In e-commerce, creating high-quality, consistent product content is resource-intensive:
+- **Volume**: Thousands of products require FAQs, descriptions, and comparisons
+- **Consistency**: Maintaining accuracy across all content
+- **Scalability**: Manual creation costs $50-100 per product page
 
-- **Volume**: Thousands of products require detailed descriptions, comparisons, and FAQs
-- **Personalization**: Different customers need different recommendations based on skin type and concerns
-- **Consistency**: Maintaining brand voice and accuracy across all content
-- **Time & Cost**: Manual content creation by experts is expensive and slow
-- **Updates**: Product information changes frequently, requiring constant content updates
-
-**Business Impact:**
-- Manual content creation costs $50-100 per product page
-- Average time: 2-4 hours per comprehensive product analysis
-- Scaling to 1000+ products becomes prohibitively expensive
-- Inconsistent quality across different writers
-
-**Our Solution:** An automated, multi-agent AI system that generates consistent, high-quality skincare content at scale while maintaining personalization and accuracy.
+**Our Solution:** A multi-agent AI system using the **Coordinator-Worker-Delegator (CWD)** architecture that generates consistent, structured content autonomously.
 
 ---
 
 ## Solution Overview
 
-### Multi-Agent Architecture
+### Coordinator-Worker-Delegator (CWD) Architecture
 
-We designed a **specialized multi-agent system** where each agent has a single, focused responsibility. This architecture provides:
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      COORDINATOR                            │
+│  (orchestrator.py - State/Memory Management)               │
+└─────────────────────────────────────────────────────────────┘
+                           │
+        ┌──────────────────┼──────────────────┐
+        ▼                  ▼                  ▼
+┌──────────────┐   ┌──────────────┐   ┌──────────────┐
+│  DataAgent   │   │  Delegator   │   │  Generation  │
+│  Synthetic   │   │   +Workers   │   │  +Verifier   │
+└──────────────┘   └──────────────┘   └──────────────┘
+```
 
-**Key Benefits:**
-1. **Modularity**: Each agent can be developed, tested, and updated independently
-2. **Scalability**: Easy to add new content types by adding new agents
-3. **Maintainability**: Clear separation of concerns makes debugging and updates simple
-4. **Reliability**: Failure in one agent doesn't crash the entire system
-5. **Flexibility**: Agents can be reused across different workflows
-
-**Agent Specializations:**
-- **InputParserAgent**: Validates and structures raw input data
-- **ProductAnalysisAgent**: Generates detailed product analyses and reviews
-- **RecommendationAgent**: Creates personalized product recommendations
-- **FAQGenerator**: Produces comprehensive FAQ content
-- **ComparisonGenerator**: Generates side-by-side product comparisons
-
-**Orchestration:**
-The `ContentGenerationSystem` acts as the central orchestrator, routing requests to appropriate agents and coordinating their outputs.
+**Key Components:**
+| Component | File | Purpose |
+|-----------|------|---------|
+| Coordinator | `orchestrator.py` | Strategic routing, state/memory |
+| Delegator | `delegator.py` | Task distribution with retry |
+| Workers | `workers.py` | Specialized domain tasks |
+| Verifier | `verifier.py` | Independent output verification |
 
 ---
 
 ## System Design
 
-### Architecture: Parser → Agent → Template Flow
-
-Our system follows a clear, linear flow that ensures data quality and consistency:
-
-```
-1. INPUT LAYER
-   ↓
-   Raw user input (JSON/dict) → InputParserAgent
-   ↓
-   Validates, parses, extracts keywords
-   ↓
-2. DATA MODEL LAYER
-   ↓
-   Structured data (Product, UserProfile, ContentRequest)
-   ↓
-3. AGENT LAYER
-   ↓
-   Specialized agents process based on request type
-   ↓
-4. SERVICE LAYER
-   ↓
-   LLM service generates content, comparison service handles logic
-   ↓
-5. OUTPUT LAYER
-   ↓
-   Structured JSON output with generated content
-```
-
-#### Detailed Flow Diagram
+### Agent Flow Diagram
 
 ```mermaid
 graph TD
-    Raw[Raw Text Input] -->|Regex Parse| Parser(InputParserAgent)
-    Parser --> Model(Product Data Model)
+    Start([Start]) --> Coordinator
+    Coordinator --> DataAgent[DataAgent: Load Product Data]
+    DataAgent --> SyntheticAgent[SyntheticDataAgent: Generate Product B]
+    SyntheticAgent --> Delegator
     
-    Model --> FAQ(FAQ Agent)
-    Model --> Desc(Product Page Agent)
-    Model --> Comp(Comparison Agent)
+    subgraph "Delegator Control"
+        Delegator --> BenefitsWorker[Benefits Worker]
+        Delegator --> UsageWorker[Usage Worker]
+        Delegator --> QuestionsWorker[Questions Worker]
+        Delegator --> ComparisonWorker[Comparison Worker]
+        Delegator --> ValidationWorker[Validation Worker]
+    end
+    
+    ValidationWorker -->|PASS| GenerationAgent
+    ValidationWorker -->|FAIL| Delegator
+    
+    GenerationAgent --> VerifierAgent[Verifier: Independent Audit]
+    VerifierAgent --> Output([JSON Output])
+```
+
+### Data Flow
+
+```mermaid
+flowchart LR
+    subgraph Input
+        GlowBoost[GlowBoost Product Data]
+        RadiancePlus[RadiancePlus - Fictional]
+    end
     
     subgraph "Logic Blocks"
-        FAQ -->|Mock LLM| QGen(Generate 15 Qs)
-        Comp -->|Simulate| Rival(Generate Product B)
+        Benefits[benefits_block.py]
+        Usage[usage_block.py]
+        Questions[question_generator.py]
+        Comparison[comparison_block.py]
     end
     
-    FAQ --> JSON1[faq.json]
-    Desc --> JSON2[product_page.json]
-    Comp --> JSON3[comparison_page.json]
-```
-
-### Detailed System Architecture
-
-#### Multi-Agent Pipeline DAG
-
-```mermaid
-graph LR
-    subgraph "Input Layer"
-        GlowBoost[GlowBoost Product Data]
-        ProductB[RadiancePlus Product Data]
-    end
-    
-    subgraph "Logic Block Layer"
-        Benefits[Benefits Block]
-        Usage[Usage Block]
-        Compare[Comparison Block]
-        Questions[Question Generator]
-    end
-    
-    subgraph "Template Layer"
+    subgraph Templates
         FAQTpl[FAQ Template]
         ProductTpl[Product Template]
-        CompareTpl[Comparison Template]
+        CompTpl[Comparison Template]
     end
     
-    subgraph "Output Layer"
-        FAQ_JSON[faq.json]
-        Product_JSON[product_page.json]
-        Compare_JSON[comparison_page.json]
+    subgraph Output
+        FAQ[faq.json - 15 Qs]
+        Product[product_page.json]
+        Compare[comparison_page.json]
     end
     
-    GlowBoost --> Benefits
-    GlowBoost --> Usage
-    GlowBoost --> Questions
-    GlowBoost --> Compare
-    ProductB --> Compare
-    
-    Benefits --> ProductTpl
-    Usage --> ProductTpl
-    Questions --> FAQTpl
-    Compare --> CompareTpl
-    
-    ProductTpl --> Product_JSON
-    FAQTpl --> FAQ_JSON
-    CompareTpl --> Compare_JSON
-```
-
-#### Component Interaction Diagram
-
-```mermaid
-sequenceDiagram
-    participant Pipeline as Pipeline Orchestrator
-    participant Logic as Logic Blocks
-    participant Template as Templates
-    participant Output as JSON Files
-    
-    Pipeline->>Logic: Load GlowBoost data
-    Logic->>Logic: Extract benefits
-    Logic->>Logic: Extract usage
-    Logic->>Logic: Generate questions
-    
-    Logic->>Template: Pass structured data
-    Template->>Template: Render FAQ template
-    Template->>Template: Render Product template
-    Template->>Template: Render Comparison template
-    
-    Template->>Output: Write faq.json
-    Template->>Output: Write product_page.json
-    Template->>Output: Write comparison_page.json
-    
-    Output-->>Pipeline: All files generated
-```
-
-#### Data Flow Architecture
-
-```mermaid
-flowchart TD
-    Start([Start Pipeline]) --> Load[Load Product Data]
-    Load --> Parse{Parse & Validate}
-    
-    Parse -->|FAQ Request| QGen[Question Generator]
-    Parse -->|Product Request| BenUse[Benefits + Usage Blocks]
-    Parse -->|Comparison Request| CompBlock[Comparison Block]
-    
-    QGen --> FAQData[FAQ Data Structure]
-    BenUse --> ProdData[Product Data Structure]
-    CompBlock --> CompData[Comparison Data Structure]
-    
-    FAQData --> FAQTpl[FAQ Template.render]
-    ProdData --> ProdTpl[Product Template.render]
-    CompData --> CompTpl[Comparison Template.render]
-    
-    FAQTpl --> FAQJSON[faq.json]
-    ProdTpl --> ProdJSON[product_page.json]
-    CompTpl --> CompJSON[comparison_page.json]
-    
-    FAQJSON --> End([Pipeline Complete])
-    ProdJSON --> End
-    CompJSON --> End
-```
-
-
-#### Component Breakdown
-
-**1. Input Parser (InputParserAgent)**
-- **Role**: First line of defense for data quality
-- **Responsibilities**:
-  - Validates input structure and required fields
-  - Parses skin types and concerns from text
-  - Extracts keywords using regex patterns
-  - Converts raw data to structured models
-- **Output**: `ContentRequest` object with validated data
-
-**2. Data Models (Pydantic/Dataclasses)**
-- **Product**: Complete product information with ingredients, pricing, ratings
-- **UserProfile**: Skin type, concerns, budget, preferences
-- **ContentRequest**: Structured request with type and context
-- **Enums**: SkinType, SkinConcern for type safety
-
-**3. Specialized Agents**
-- **ProductAnalysisAgent**: Analyzes ingredients, calculates suitability scores, generates reviews
-- **RecommendationAgent**: Scores products against user profiles, generates personalized routines
-- **FAQGenerator**: Creates Q&A pairs for products or topics
-- **ComparisonGenerator**: Performs side-by-side analysis, determines winners per category
-
-**4. LLM Service Layer**
-- **MockLLMService**: Simulates LLM responses for testing and development
-- **Interface**: Designed for easy swap to real LLM APIs (OpenAI, Anthropic, etc.)
-
-**5. Output Generation**
-- Structured JSON responses
-- Consistent format across all content types
-- Includes metadata (scores, timestamps, model info)
-
----
-
-### Key Design Decisions
-
-#### Decision 1: Mock LLM Service
-
-**Why we used a Mock LLM instead of real API:**
-
-**Reliability:**
-- ✅ No API downtime or rate limits during development
-- ✅ Consistent responses for testing
-- ✅ No dependency on external services for demos
-- ✅ Predictable behavior for unit tests
-
-**Cost:**
-- ✅ Zero API costs during development and testing
-- ✅ Unlimited iterations without budget concerns
-- ✅ Can run thousands of tests without expense
-- ✅ Development team can work without API keys
-
-**Development Speed:**
-- ✅ Instant responses (no network latency)
-- ✅ No need to manage API keys and authentication
-- ✅ Easy to test edge cases and error scenarios
-- ✅ Faster iteration cycles
-
-**Production Transition:**
-```python
-# Development
-system = ContentGenerationSystem()  # Uses MockLLMService
-
-# Production (simple swap)
-from openai_service import OpenAIService
-llm = OpenAIService(api_key="...")
-system = ContentGenerationSystem(llm_service=llm)
-```
-
-**Trade-offs:**
-- Mock responses are simpler than real LLM output
-- Need to replace before production deployment
-- Mock doesn't capture full LLM capabilities
-
-**Verdict:** The mock approach was ideal for building a robust architecture without external dependencies.
-
----
-
-#### Decision 2: Pydantic/Dataclasses for Data Safety
-
-**Why we used structured data models:**
-
-**Type Safety:**
-- ✅ Catches errors at development time, not runtime
-- ✅ IDE autocomplete and type hints
-- ✅ Clear contracts between components
-- ✅ Prevents invalid data from propagating
-
-**Data Validation:**
-```python
-@dataclass
-class Product:
-    id: str
-    name: str
-    price: float  # Must be a number
-    skin_types: List[SkinType]  # Must be valid enum values
-```
-
-**Benefits:**
-- ✅ Automatic validation of required fields
-- ✅ Type conversion (string → enum)
-- ✅ Clear error messages when data is invalid
-- ✅ Self-documenting code
-
-**Example Protection:**
-```python
-# This will fail at validation, not deep in the code
-product = Product(
-    name="Serum",
-    price="expensive",  # ❌ TypeError: expected float
-    skin_types=["invalid"]  # ❌ ValueError: invalid SkinType
-)
-```
-
-**Serialization:**
-- ✅ Easy conversion to/from JSON
-- ✅ Consistent data format across system
-- ✅ API-ready output
-
-**Maintainability:**
-- ✅ Single source of truth for data structure
-- ✅ Easy to add new fields
-- ✅ Refactoring is safer with type checking
-
-**Alternative Considered:**
-- Plain dictionaries: Too error-prone, no validation
-- JSON Schema: More verbose, less Pythonic
-
-**Verdict:** Dataclasses with type hints provide the perfect balance of safety, simplicity, and Python idioms.
-
----
-
-### Architecture Patterns Applied
-
-#### 1. Single Responsibility Principle
-Each agent has ONE job:
-- InputParser: Parse and validate
-- ProductAnalyzer: Analyze products
-- Recommender: Generate recommendations
-- FAQGenerator: Create FAQs
-
-#### 2. Dependency Injection
-```python
-class ProductAnalysisAgent:
-    def __init__(self, llm_service):
-        self.llm_service = llm_service  # Injected dependency
-```
-
-**Benefits:**
-- Easy to swap LLM implementations
-- Testable (inject mock services)
-- Loose coupling between components
-
-#### 3. Strategy Pattern
-Different agents implement the same interface but with different strategies:
-```python
-# All agents follow similar pattern
-agent.generate(input_data) → output_data
-```
-
-#### 4. Facade Pattern
-`ContentGenerationSystem` provides a simple interface to complex subsystem:
-```python
-# Simple API hides complexity
-result = system.generate_content(user_input)
+    GlowBoost --> Benefits --> ProductTpl --> Product
+    GlowBoost --> Usage --> ProductTpl
+    GlowBoost --> Questions --> FAQTpl --> FAQ
+    GlowBoost --> Comparison
+    RadiancePlus --> Comparison --> CompTpl --> Compare
 ```
 
 ---
 
-### File Structure Rationale
+## Scopes & Assumptions
+
+### In Scope
+- Parse GlowBoost product data (as specified in assignment)
+- Generate 15+ categorized questions
+- Create 3 JSON output files (FAQ, Product, Comparison)
+- Fictional Product B (RadiancePlus) for comparison
+- Autonomous multi-agent pipeline
+
+### Assumptions
+- No external API calls (mock/simulated LLM)
+- Single product input per run
+- English language only
+- JSON output format
+
+---
+
+## Key Features
+
+### 1. Safety & Verification
+| Feature | File | Purpose |
+|---------|------|---------|
+| Guardrails | `guardrails.py` | Input/tool validation, PII detection |
+| HITL Gate | `hitl.py` | Human authorization for high-stakes |
+| VerifierAgent | `verifier.py` | Independent output audit |
+
+### 2. State & Memory
+| Feature | File | Purpose |
+|---------|------|---------|
+| StateSpace | `state_manager.py` | Workflow phases, transitions |
+| Working Memory | `memory.py` | Short-term task context |
+| Episodic Memory | `memory.py` | Past outcomes for learning |
+| Knowledge Base | `memory.py` | Persistent domain rules |
+
+### 3. Evaluation & Observability
+| Feature | File | Purpose |
+|---------|------|---------|
+| Failure Taxonomy | `evaluation.py` | Categorize failures |
+| Execution Tracer | `tracer.py` | Log agent calls, export traces |
+
+### 4. Tooling
+| Feature | File | Purpose |
+|---------|------|---------|
+| Role-Based Access | `tools/__init__.py` | Limit tools per agent |
+| Graceful Errors | `tools/__init__.py` | Descriptive error messages |
+
+---
+
+## Agent Personas (Role Engineering)
+
+| Agent | Role | Backstory |
+|-------|------|-----------|
+| Coordinator | Strategic Director | Ensures system integrity, optimizes flow |
+| Delegator | Project Manager | Distributes tasks, tracks completion |
+| BenefitsWorker | Benefits Specialist | Dermatologist assistant for benefits |
+| UsageWorker | Usage Specialist | Product usage guidelines expert |
+| QuestionsWorker | FAQ Generator | Customer success specialist |
+| ValidationWorker | QA Officer | Strict content auditor |
+| VerifierAgent | Independent Auditor | "Never trusts, always verifies" |
+
+---
+
+## Output Files
+
+### 1. faq.json (15 Questions)
+```json
+{
+  "product": "GlowBoost Vitamin C Serum",
+  "total_questions": 15,
+  "faqs": [
+    {"question": "...", "answer": "...", "category": "Informational"},
+    ...
+  ]
+}
+```
+
+### 2. product_page.json
+```json
+{
+  "product_info": {"name": "...", "brand": "...", "concentration": "..."},
+  "benefits": [...],
+  "ingredients": {...},
+  "pricing": {"price": 699.0, "currency": "INR"}
+}
+```
+
+### 3. comparison_page.json
+```json
+{
+  "primary_product": "GlowBoost Vitamin C Serum",
+  "comparison_with": "RadiancePlus Brightening Serum",
+  "comparison_table": [...],
+  "winner_categories": {...}
+}
+```
+
+---
+
+## Run Commands
+
+```bash
+# Main pipeline
+python -m skincare_agent_system.main
+
+# Run all tests
+pytest tests/ -v
+
+# Specific test suites
+pytest tests/test_safety.py -v
+pytest tests/test_memory.py -v
+pytest tests/test_evaluation.py -v
+pytest tests/test_tools.py -v
+```
+
+---
+
+## Architecture Patterns
+
+1. **CWD Model**: Coordinator-Worker-Delegator hierarchy
+2. **Single Responsibility**: Each agent has one focused task
+3. **State Machine**: Orchestrator uses StateSpace for routing
+4. **Tool Autonomy**: Agents select tools via ToolRegistry
+5. **Role Engineering**: Personas with role + backstory
+
+---
+
+## File Structure
 
 ```
 skincare_agent_system/
-├── content_gen_system.py      # Orchestrator (200 lines)
-├── models/                    # Data layer
-├── agents/                    # Business logic
-└── services/                  # External dependencies
+├── main.py                 # Entry point
+├── orchestrator.py         # Coordinator (state/memory)
+├── delegator.py            # Task distribution + retry
+├── workers.py              # Specialized workers
+├── verifier.py             # Independent verification
+├── agents.py               # BaseAgent class
+├── models.py               # Pydantic models
+├── guardrails.py           # Safety callbacks
+├── hitl.py                 # Human-in-the-loop
+├── state_manager.py        # StateSpace
+├── memory.py               # Memory system
+├── evaluation.py           # Failure analysis
+├── tracer.py               # Execution tracing
+├── tools/
+│   ├── __init__.py         # ToolRegistry, role-based access
+│   └── content_tools.py    # Content transformation tools
+├── logic_blocks/
+│   ├── benefits_block.py
+│   ├── usage_block.py
+│   ├── comparison_block.py
+│   └── question_generator.py
+├── templates/
+│   ├── faq_template.py
+│   ├── product_page_template.py
+│   └── comparison_template.py
+└── data/
+    └── products.py         # GlowBoost + RadiancePlus
 ```
 
-**Why NOT a single file?**
-
-| Aspect | Single File | Multi-File (Our Choice) |
-|--------|-------------|------------------------|
-| Lines per file | 1500+ | 100-200 |
-| Find a function | Scroll & search | Jump to file |
-| Test a component | Test everything | Isolated tests |
-| Team collaboration | Merge conflicts | Parallel work |
-| Add new feature | Modify giant file | Add new file |
-
-**Scalability Example:**
-- Adding a new agent: Create 1 file, update 2 lines in orchestrator
-- With single file: Find right place in 1500 lines, risk breaking existing code
-
 ---
 
-### Testing Strategy
+## Conclusion
 
-**Component Testing:**
-```python
-# Test each agent independently
-def test_input_parser():
-    parser = InputParserAgent()
-    result = parser.parse_user_input(test_data)
-    assert result.request_type == "product_analysis"
-```
+This system demonstrates:
+- ✅ **CWD Architecture**: Clear hierarchy and boundaries
+- ✅ **Safety**: Guardrails, HITL, independent verification
+- ✅ **State Management**: Structured state space with memory
+- ✅ **Observability**: Failure taxonomy, execution tracing
+- ✅ **Tooling Best Practices**: Role-based access, graceful errors
+- ✅ **Role Engineering**: Agent personas with backstories
 
-**Integration Testing:**
-```python
-# Test full system flow
-def test_full_workflow():
-    system = ContentGenerationSystem()
-    result = system.generate_content(user_input)
-    assert result['status'] == 'success'
-```
-
-**Test Results:** ✅ 4/4 tests passed
-
----
-
-### Performance Considerations
-
-**Current Performance:**
-- Mock LLM: ~10ms per request
-- Full workflow: ~50ms end-to-end
-- No external API calls
-
-**Production Estimates (with real LLM):**
-- LLM API call: 1-3 seconds
-- Full workflow: 2-5 seconds
-- Caching can reduce to <100ms for repeated requests
-
-**Optimization Opportunities:**
-1. Cache LLM responses for identical inputs
-2. Batch multiple requests
-3. Async processing for multiple agents
-4. Pre-compute product scores
-
----
-
-### Future Enhancements
-
-**Planned Improvements:**
-1. **Real LLM Integration**: OpenAI GPT-4, Anthropic Claude
-2. **Database Layer**: PostgreSQL for product storage
-3. **API Layer**: FastAPI REST API for web access
-4. **Caching**: Redis for LLM response caching
-5. **Analytics**: Track content performance metrics
-6. **A/B Testing**: Compare different content variations
-7. **Multi-language**: Support for international markets
-8. **Image Generation**: Product visualization with DALL-E
-
----
-
-### Conclusion
-
-This multi-agent system demonstrates:
-- ✅ **Clean Architecture**: Separation of concerns, modular design
-- ✅ **Production-Ready**: Type safety, error handling, testing
-- ✅ **Scalable**: Easy to add features and agents
-- ✅ **Maintainable**: Clear structure, well-documented
-- ✅ **Cost-Effective**: Mock LLM for development, easy transition to production
-
-The system successfully automates skincare content generation while maintaining quality, consistency, and personalization at scale.
+**Author:** Sarvagya Jain
+**Assignment:** Kasparro Applied AI Engineer Challenge
