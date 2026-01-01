@@ -5,11 +5,13 @@ Distinct from ValidationWorker - this agent critically evaluates final outputs.
 
 import logging
 import re
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from .agents import BaseAgent
 from .guardrails import Guardrails
 from .models import AgentContext, AgentResult, AgentStatus, TaskDirective
+from .proposals import AgentProposal
 
 logger = logging.getLogger("Verifier")
 
@@ -18,15 +20,12 @@ class VerifierAgent(BaseAgent):
     """
     Independent Verifier Agent.
     Performs post-generation verification to ensure outputs meet quality and safety standards.
-    This is separate from ValidationWorker to follow the principle:
-    "Do not rely on the generating agent to check its own work."
+    Proposes action when generation is complete but not verified.
     """
 
-    # Quality thresholds
     MIN_CONTENT_LENGTH: int = 50
     MAX_CONTENT_LENGTH: int = 100000
 
-    # Harmful content patterns
     HARMFUL_PATTERNS: List[re.Pattern] = [
         re.compile(
             r"\b(kill|harm|damage|destroy)\s+(skin|yourself|user)", re.IGNORECASE
@@ -35,11 +34,65 @@ class VerifierAgent(BaseAgent):
         re.compile(r"\b(ingest|drink|eat)\s+(serum|cream|lotion)", re.IGNORECASE),
     ]
 
-    def __init__(self, name: str):
+    def __init__(self, name: str = "VerifierAgent"):
         super().__init__(
             name,
             role="Independent Auditor",
-            backstory="Critical evaluator who independently verifies outputs meet quality and safety standards. Never trusts, always verifies.",
+            backstory="Critical evaluator who independently verifies outputs. Never trusts, always verifies.",
+        )
+        self._verified = False
+
+    def can_handle(self, context: AgentContext) -> bool:
+        """Can handle if generation complete but not verified."""
+        output_dir = Path("output")
+        outputs_exist = (
+            (output_dir / "faq.json").exists() and
+            (output_dir / "product_page.json").exists()
+        )
+        return context.is_valid and outputs_exist and not self._verified
+
+    def propose(self, context: AgentContext) -> Optional[AgentProposal]:
+        """Propose to verify if outputs exist."""
+        if not context.is_valid:
+            return AgentProposal(
+                agent_name=self.name,
+                action="verify",
+                confidence=0.0,
+                reason="Need validated context first",
+                preconditions_met=False
+            )
+
+        output_dir = Path("output")
+        outputs_exist = (
+            (output_dir / "faq.json").exists() and
+            (output_dir / "product_page.json").exists()
+        )
+
+        if not outputs_exist:
+            return AgentProposal(
+                agent_name=self.name,
+                action="verify",
+                confidence=0.0,
+                reason="Need generated outputs first",
+                preconditions_met=False
+            )
+
+        if self._verified:
+            return AgentProposal(
+                agent_name=self.name,
+                action="verify",
+                confidence=0.0,
+                reason="Already verified",
+                preconditions_met=False
+            )
+
+        return AgentProposal(
+            agent_name=self.name,
+            action="verify_outputs",
+            confidence=0.95,
+            reason="Outputs generated - I can perform independent verification",
+            preconditions_met=True,
+            priority=5
         )
 
     def run(
@@ -117,6 +170,7 @@ class VerifierAgent(BaseAgent):
             logger.info("Verification passed with no issues")
             context.log_decision(self.name, "PASS: All verification checks complete")
 
+        self._verified = True
         return self.create_result(
             AgentStatus.COMPLETE, context, "Verification complete"
         )

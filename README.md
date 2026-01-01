@@ -7,7 +7,7 @@
 
 ## 🎯 What This System Does
 
-Transforms product data → Structured JSON content pages through a **Coordinator-Worker-Delegator (CWD)** architecture with safety, memory, and observability.
+Transforms product data → Structured JSON content pages through a **truly agentic** system where **agents propose actions** and the Coordinator selects the best proposal.
 
 **Input:** GlowBoost Vitamin C Serum product data
 **Output:** 3 JSON files (FAQ, Product Page, Comparison)
@@ -16,12 +16,34 @@ Transforms product data → Structured JSON content pages through a **Coordinato
 
 | Feature | Implementation |
 |---------|----------------|
+| **Agent Proposals** | Agents assess context and propose actions |
+| **Dynamic Selection** | Coordinator picks highest-confidence proposal |
+| **Event-Driven** | Agents communicate via EventBus |
 | **CWD Architecture** | Coordinator → Delegator → Workers |
 | **Role Engineering** | Agent personas with backstories |
 | **Safety & Verification** | Guardrails, HITL, VerifierAgent |
 | **Memory System** | Working, Episodic, Knowledge Base |
 | **State Management** | StateSpace with transitions |
-| **Evaluation & Observability** | Failure taxonomy, execution tracing |
+
+## 🤖 True Agent Autonomy
+
+```
+BEFORE (Deterministic):
+  Coordinator decides: "Run DataAgent next"
+
+AFTER (Agent-Driven):
+  DataAgent proposes: "I can load data (0.95 confidence)"
+  Coordinator selects: Best proposal wins
+```
+
+### Decision Log Example:
+```
+[Coordinator] Collected 5 proposals from agents
+  → DataAgent: load_data (0.95) - No product data loaded
+  → SyntheticAgent: generate (0.0) - Need data first
+  → DelegatorAgent: delegate (0.0) - Need data first
+[Coordinator] SELECTED: DataAgent (0.95) - I can fetch and validate data
+```
 
 ## 🚀 Quick Start
 
@@ -40,41 +62,44 @@ pytest tests/ -v
 ```
 ┌─────────────────────────────────────────┐
 │           COORDINATOR                   │
-│    (State + Memory + Tracing)          │
+│  (Collects proposals, selects best)    │
 └─────────────────────────────────────────┘
-              │
+              │ Proposals
     ┌─────────┼─────────┐
     ▼         ▼         ▼
 ┌────────┐ ┌─────────┐ ┌──────────┐
 │  Data  │ │Delegator│ │Generation│
 │ Agents │ │+Workers │ │ +Verify  │
 └────────┘ └─────────┘ └──────────┘
+   Each agent: can_handle() + propose()
 ```
 
 ## 📁 Project Structure
 
 ```
 skincare_agent_system/
-├── orchestrator.py    # Coordinator
-├── delegator.py       # Delegator
+├── orchestrator.py    # Coordinator (proposal-based)
+├── proposals.py       # ProposalSystem, EventBus, Goals
+├── delegator.py       # Delegator with proposals
 ├── workers.py         # Specialized Workers
 ├── verifier.py        # Independent Verifier
+├── agents.py          # BaseAgent with can_handle/propose
 ├── guardrails.py      # Safety Callbacks
 ├── hitl.py            # Human-in-the-Loop
 ├── state_manager.py   # State Space
 ├── memory.py          # Memory System
 ├── evaluation.py      # Failure Analysis
 ├── tracer.py          # Execution Tracing
-└── ...
+└── tools/             # Role-based tool access
 ```
 
 ## 🧪 Testing
 
 ```bash
 pytest tests/ -v
+pytest tests/test_proposals.py -v  # Agent autonomy tests
 pytest tests/test_safety.py -v
 pytest tests/test_memory.py -v
-pytest tests/test_evaluation.py -v
 pytest tests/test_tools.py -v
 ```
 
