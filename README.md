@@ -75,6 +75,7 @@ pytest tests/ -v
 pytest tests/test_safety.py -v
 pytest tests/test_memory.py -v
 pytest tests/test_evaluation.py -v
+pytest tests/test_tools.py -v
 ```
 
 ## 👤 Author
