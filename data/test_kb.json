@@ -1,0 +1,22 @@
+{
+  "domain_rules": {
+    "min_faq_questions": 15,
+    "required_product_fields": [
+      "name",
+      "brand",
+      "key_ingredients"
+    ],
+    "max_retry_attempts": 3,
+    "validation_thresholds": {
+      "min_benefits": 2,
+      "min_question_length": 10
+    }
+  },
+  "user_preferences": {
+    "output_format": "json",
+    "include_comparison": true,
+    "language": "en"
+  },
+  "product_catalog": {},
+  "last_updated": "2026-01-01T17:41:51.203240"
+}
