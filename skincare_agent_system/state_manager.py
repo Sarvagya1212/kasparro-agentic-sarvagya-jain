@@ -4,16 +4,17 @@ Maintains workflow status, available actions, and outcomes.
 """
 
 import logging
-from enum import Enum
-from typing import Any, Dict, List, Optional
 from dataclasses import dataclass, field
 from datetime import datetime
+from enum import Enum
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger("StateManager")
 
 
 class WorkflowStatus(Enum):
     """Workflow lifecycle states."""
+
     IDLE = "IDLE"
     PROCESSING = "PROCESSING"
     AWAITING_INPUT = "AWAITING_INPUT"
@@ -52,10 +53,10 @@ class StateSpace:
         Returns:
             True if transition was valid
         """
-        if action not in self.available_actions and self.available_actions:
-            logger.warning(
-                f"Invalid action '{action}'. Available: {self.available_actions}"
-            )
+        # 'execute' is always valid (used by orchestrator for agent execution)
+        valid_actions = self.available_actions + ["execute"]
+        if action not in valid_actions and self.available_actions:
+            logger.warning(f"Invalid action '{action}'. Available: {valid_actions}")
             return False
 
         # Record transition
@@ -118,6 +119,7 @@ class StateManager:
     def checkpoint(self):
         """Save current state as checkpoint."""
         import copy
+
         self._checkpoints.append(copy.deepcopy(self.state_space))
         logger.info(f"Checkpoint saved ({len(self._checkpoints)} total)")
 
@@ -135,8 +137,7 @@ class StateManager:
         """Initialize workflow state."""
         self.state_space.workflow_status = WorkflowStatus.PROCESSING
         self.state_space.set_phase(
-            "data_loading",
-            ["load_data", "generate_synthetic", "skip_to_analysis"]
+            "data_loading", ["load_data", "generate_synthetic", "skip_to_analysis"]
         )
 
     def complete_workflow(self):
