@@ -1,6 +1,7 @@
 """
 Memory System: Differentiated memory types for coherent long interactions.
-Includes Working Memory, Knowledge Base, Episodic Memory, and Context Compression.
+Includes Working Memory, Knowledge Base, Episodic Memory, Context Compression,
+and SessionState for cross-turn persistence.
 """
 
 import json
@@ -11,6 +12,95 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger("Memory")
+
+
+@dataclass
+class SessionState:
+    """
+    Session State: Persists state across conversation turns.
+    Enables long-term user preferences and interaction history.
+    """
+    session_id: str = ""
+    user_preferences: Dict[str, Any] = field(default_factory=dict)
+    interaction_history: List[Dict] = field(default_factory=list)
+    learned_patterns: List[str] = field(default_factory=list)
+    context_variables: Dict[str, Any] = field(default_factory=dict)
+    created_at: str = field(default_factory=lambda: datetime.now().isoformat())
+    last_updated: str = field(default_factory=lambda: datetime.now().isoformat())
+
+    def set_preference(self, key: str, value: Any):
+        """Set a user preference."""
+        self.user_preferences[key] = value
+        self._touch()
+
+    def get_preference(self, key: str, default: Any = None) -> Any:
+        """Get a user preference."""
+        return self.user_preferences.get(key, default)
+
+    def add_interaction(self, interaction: Dict):
+        """Add an interaction to history."""
+        interaction["timestamp"] = datetime.now().isoformat()
+        self.interaction_history.append(interaction)
+        self._touch()
+
+    def learn_pattern(self, pattern: str):
+        """Learn a new pattern from interactions."""
+        if pattern not in self.learned_patterns:
+            self.learned_patterns.append(pattern)
+            self._touch()
+
+    def set_variable(self, key: str, value: Any):
+        """Set a context variable."""
+        self.context_variables[key] = value
+        self._touch()
+
+    def get_variable(self, key: str, default: Any = None) -> Any:
+        """Get a context variable."""
+        return self.context_variables.get(key, default)
+
+    def _touch(self):
+        """Update last_updated timestamp."""
+        self.last_updated = datetime.now().isoformat()
+
+    def persist(self, path: str):
+        """Save session to disk."""
+        data = {
+            "session_id": self.session_id,
+            "user_preferences": self.user_preferences,
+            "interaction_history": self.interaction_history,
+            "learned_patterns": self.learned_patterns,
+            "context_variables": self.context_variables,
+            "created_at": self.created_at,
+            "last_updated": self.last_updated
+        }
+        Path(path).parent.mkdir(parents=True, exist_ok=True)
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2)
+        logger.info(f"Session state persisted to {path}")
+
+    @classmethod
+    def restore(cls, path: str) -> "SessionState":
+        """Restore session from disk."""
+        filepath = Path(path)
+        if not filepath.exists():
+            return cls()
+        try:
+            with open(filepath, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            session = cls(
+                session_id=data.get("session_id", ""),
+                user_preferences=data.get("user_preferences", {}),
+                interaction_history=data.get("interaction_history", []),
+                learned_patterns=data.get("learned_patterns", []),
+                context_variables=data.get("context_variables", {}),
+                created_at=data.get("created_at", datetime.now().isoformat()),
+                last_updated=data.get("last_updated", datetime.now().isoformat())
+            )
+            logger.info(f"Session state restored from {path}")
+            return session
+        except Exception as e:
+            logger.warning(f"Failed to restore session: {e}")
+            return cls()
 
 
 @dataclass
