@@ -45,7 +45,7 @@ def generate_faq_page(product_data: dict, output_path: str = "output/faq.json"):
     # Prepare data for template
     template_data = {
         "product_name": product_data["name"],
-        "qa_pairs": [(q, a) for q, a, c in qa_list],
+        "qa_pairs": [[q, a] for q, a, c in qa_list],  # Use list for JSON consistency
         "categories": {},
         "timestamp": datetime.now().isoformat(),
     }

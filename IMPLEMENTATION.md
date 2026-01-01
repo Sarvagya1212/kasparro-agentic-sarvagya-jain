@@ -1,63 +1,75 @@
 # Implementation Summary
 
-## ✅ What Was Built
-
-### 1. Template System (/templates)
-- **base_template.py** - Abstract template protocol
-- **faq_template.py** - Structures FAQ into JSON
-- **product_page_template.py** - Structures product info into JSON
-- **comparison_template.py** - Structures comparison into JSON
-
-### 2. Logic Blocks (/logic_blocks)
-- **benefits_block.py** - Extract and format benefits
-- **usage_block.py** - Extract and format usage instructions
-- **comparison_block.py** - Compare products (ingredients, price, benefits)
-- **question_generator.py** - Generate 15+ categorized questions
-
-### 3. Data Layer
-- **data/products.py** - GlowBoost product (from assignment) + fictional Product B
-
-### 4. Pipeline
-- **generate_content.py** - Main orchestrator that:
-  1. Loads product data
-  2. Applies logic blocks
-  3. Renders templates
-  4. Outputs JSON files
-
-## 📊 Generated Outputs
-
-All 3 required JSON files created in `/output`:
-
-1. **faq.json** - 15 questions across 6 categories
-2. **product_page.json** - Structured product information
-3. **comparison_page.json** - Side-by-side comparison
-
-## 🎯 Assignment Compliance
-
-| Requirement | Met | Evidence |
-|------------|-----|----------|
-| Multi-agent system | ✅ | Logic blocks + Templates + Pipeline |
-| Own templates | ✅ | Custom template classes, NOT LLM prompts |
-| Reusable logic blocks | ✅ | 4 independent logic modules |
-| 15+ questions | ✅ | 15 questions in 6 categories |
-| 3 JSON outputs | ✅ | faq.json, product_page.json, comparison_page.json |
-| GlowBoost data | ✅ | Exact data from assignment |
-| Fictional Product B | ✅ | RadiancePlus Brightening Serum |
-| No LLM prompting | ✅ | Pure logic + templates |
-
-## 🏗️ Architecture
+## ✅ Architecture: Coordinator-Worker-Delegator (CWD)
 
 ```
-Data → Logic Blocks → Templates → JSON
+Coordinator.run() → while not COMPLETE:
+    → DataAgent (fetch data)
+    → SyntheticDataAgent (if competitor missing)
+    → DelegatorAgent:
+        → BenefitsWorker
+        → UsageWorker
+        → QuestionsWorker
+        → ComparisonWorker
+        → ValidationWorker (with retry loop)
+    → GenerationAgent (output JSON)
+    → VerifierAgent (independent audit)
 ```
 
-**NOT:** `Data → LLM Prompt → Text`  
-**YES:** `Data → Rules → Structure → JSON`
+## 🔑 Key Components
 
-## 🚀 Run It
+| Component | Location | Responsibility |
+|-----------|----------|----------------|
+| `Orchestrator` | `orchestrator.py` | Coordinator with guardrails |
+| `DelegatorAgent` | `delegator.py` | Task distribution + retry loop |
+| `Workers` | `workers.py` | Specialized domain tasks |
+| `VerifierAgent` | `verifier.py` | Independent post-gen verification |
+| `Guardrails` | `guardrails.py` | Input/tool safety callbacks |
+| `HITLGate` | `hitl.py` | Human authorization gate |
+
+## 🛡️ Safety Features
+
+| Feature | Implementation |
+|---------|----------------|
+| Input Guardrails | `before_model_callback()` - blocks jailbreaks, PII |
+| Tool Guardrails | `before_tool_callback()` - validates arguments |
+| HITL | Console prompt for high-stakes actions |
+| Verifier | Catches harmful content, schema issues |
+
+## 🎭 Role Engineering
+
+| Agent | Role | Backstory |
+|-------|------|-----------|
+| Coordinator | Strategic Director | Ensures system integrity |
+| Delegator | Project Manager | Balances speed with quality |
+| BenefitsWorker | Benefits Specialist | Dermatologist assistant |
+| ValidationWorker | QA Officer | Strict auditor |
+| VerifierAgent | Independent Auditor | Never trusts, always verifies |
+
+## 🚀 Run Commands
 
 ```bash
-python skincare_agent_system\generate_content.py
+# Main pipeline
+python -m skincare_agent_system.main
+
+# Tests
+pytest tests/ -v
+pytest tests/test_safety.py -v
+pytest tests/test_roles.py -v
 ```
 
-Output appears in `/output` directory.
+## ✅ Audit Checklist
+
+- [x] CWD architecture (not linear chaining)
+- [x] State-driven routing
+- [x] Loop-back on RETRY
+- [x] Dynamic branching (SyntheticDataAgent)
+- [x] Role/backstory personas
+- [x] Instruction hierarchy (SYSTEM > USER)
+- [x] Input guardrails
+- [x] Tool guardrails
+- [x] Independent VerifierAgent
+- [x] HITL for high-stakes actions
+- [x] Pydantic at every handoff
+- [x] `max_steps = 20` termination guard
+- [x] Decision log for traceability

@@ -18,7 +18,7 @@
     "count": 2
   },
   "usage": {
-    "instructions": "Apply 2–3 drops in the morning before sunscreen",
+    "instructions": "Follow product instructions for best results.",
     "side_effects": "Mild tingling for sensitive skin"
   },
   "suitability": {
@@ -26,13 +26,10 @@
       "Oily",
       "Combination"
     ],
-    "addresses_concerns": [
-      "Brightening",
-      "Fades dark spots"
-    ]
+    "addresses_concerns": []
   },
   "pricing": {
-    "price": 699,
+    "price": 699.0,
     "currency": "INR",
     "size": "30ml"
   }

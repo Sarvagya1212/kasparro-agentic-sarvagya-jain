@@ -1,111 +1,63 @@
-# Final Project Structure
+# Project Structure
 
-## ✅ Clean, Production-Ready Structure
+## Clean, Production-Ready Layout
 
 ```
 kasparro-content-generation/
-├── .github/
-│   └── workflows/
-│       └── ci.yml                   # CI/CD pipeline
-│
 ├── skincare_agent_system/
 │   ├── __init__.py
-│   ├── data/
-│   │   └── products.py              # GlowBoost + RadiancePlus data
+│   ├── main.py                  # Entry: orchestrator.run()
+│   ├── orchestrator.py          # State-machine routing
+│   ├── models.py                # Pydantic models, AgentStatus
+│   ├── agents.py                # BaseAgent class
+│   ├── agent_implementations.py # DataAgent, AnalysisAgent, etc.
+│   ├── tools/
+│   │   ├── __init__.py          # BaseTool, ToolRegistry
+│   │   └── content_tools.py     # BenefitsTool, FAQTool, etc.
 │   ├── logic_blocks/
-│   │   ├── __init__.py
-│   │   ├── benefits_block.py        # Benefits extraction
-│   │   ├── usage_block.py           # Usage formatting
-│   │   ├── comparison_block.py      # Product comparison
-│   │   └── question_generator.py    # FAQ generation
+│   │   ├── benefits_block.py
+│   │   ├── usage_block.py
+│   │   ├── comparison_block.py
+│   │   └── question_generator.py
 │   ├── templates/
-│   │   ├── __init__.py
-│   │   ├── base_template.py         # Template protocol
-│   │   ├── faq_template.py          # FAQ structure
-│   │   ├── product_page_template.py # Product structure
-│   │   └── comparison_template.py   # Comparison structure
-│   └── generate_content.py          # Main pipeline
+│   │   ├── base_template.py
+│   │   ├── faq_template.py
+│   │   ├── product_page_template.py
+│   │   └── comparison_template.py
+│   ├── data/
+│   │   └── products.py          # GlowBoost + RadiancePlus
+│   └── README.md                # Architecture blueprint
 │
 ├── tests/
-│   ├── __init__.py
-│   ├── test_logic_blocks.py         # Logic block tests
-│   ├── test_templates.py            # Template tests
-│   ├── test_pipeline.py             # Integration tests
-│   └── validate_system.py           # Validation script
+│   ├── test_retry_loop.py       # RETRY mechanism test
+│   └── test_dynamic_flow.py     # Dynamic routing test
 │
 ├── output/
-│   ├── faq.json                     # ✅ Generated
-│   ├── product_page.json            # ✅ Generated
-│   └── comparison_page.json         # ✅ Generated
+│   ├── faq.json                 # ✅ 15 questions
+│   ├── product_page.json        # ✅ ₹699, 10%
+│   └── comparison_page.json     # ✅ Side-by-side
 │
 ├── docs/
-│   └── projectdocumentation.md      # Technical documentation
+│   └── projectdocumentation.md
 │
-├── .gitignore                       # Git ignore rules
-├── README.md                        # Main README
-├── IMPLEMENTATION.md                # Implementation summary
-├── EVALUATION.md                    # Self-evaluation
-└── requirements.txt                 # Dependencies
+├── README.md                    # Main documentation
+├── IMPLEMENTATION.md            # Implementation summary
+└── requirements.txt
 ```
 
-## 🗑️ Files Removed
+## Key Files
 
-The following unnecessary files were removed:
+| File | Purpose |
+|------|---------|
+| `main.py` | Single `orchestrator.run()` entry point |
+| `orchestrator.py` | State-machine with RETRY loop-back |
+| `models.py` | `AgentContext`, `AgentStatus` enum |
+| `agent_implementations.py` | All 5 agents |
+| `tools/content_tools.py` | ToolRegistry for agent autonomy |
 
-1. ✅ `STRUCTURE_GUIDE.md` - Redundant documentation
-2. ✅ `STRUCTURE_SUMMARY.md` - Redundant documentation
-3. ✅ `test_system.py` - Replaced by tests/ directory
-4. ✅ `skincare_agent_system/main.py` - Redundant, use generate_content.py
-5. ✅ `skincare_agent_system/content_gen_system.py` - Not needed for assignment
-6. ✅ `skincare_agent_system/agents/` - Not needed (using logic_blocks instead)
-7. ✅ `skincare_agent_system/services/` - Not needed (using logic_blocks instead)
-8. ✅ `skincare_agent_system/models/` - Not needed (using data/ instead)
-9. ✅ `__pycache__/` - Python cache (added to .gitignore)
-10. ✅ `.pytest_cache/` - Test cache (added to .gitignore)
+## Run Commands
 
-## 📊 Final Statistics
-
-- **Total Files:** ~25 (clean, focused)
-- **Lines of Code:** ~1,500 (logic blocks + templates + pipeline)
-- **Test Files:** 4 (comprehensive coverage)
-- **Documentation:** 4 files (README, docs, implementation, evaluation)
-- **JSON Outputs:** 3 (all generated successfully)
-
-## 🎯 Assignment Compliance
-
-All required components present:
-- ✅ Custom templates (3 classes)
-- ✅ Logic blocks (4 modules)
-- ✅ GlowBoost product data
-- ✅ 3 JSON outputs
-- ✅ Documentation
-- ✅ Tests
-- ✅ CI/CD
-
-## 🚀 Quick Commands
-
-### Generate Content
 ```bash
-python skincare_agent_system/generate_content.py
+python -m skincare_agent_system.main
+python tests/test_retry_loop.py
 ```
-
-### Validate System
-```bash
-python tests/validate_system.py
-```
-
-### Run Tests
-```bash
-pytest tests/ -v
-```
-
-## ✅ Ready for GitHub
-
-The project is now:
-- ✅ Clean and organized
-- ✅ Free of redundant files
-- ✅ Production-ready
-- ✅ Well-documented
-- ✅ Fully tested
-
-**Status:** Ready for submission! 🎉

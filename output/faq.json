@@ -5,7 +5,7 @@
     {
       "id": 1,
       "question": "What is GlowBoost Vitamin C Serum?",
-      "answer": "GlowBoost Vitamin C Serum is a serum designed for skincare.",
+      "answer": "GlowBoost Vitamin C Serum is a skincare product designed for skincare.",
       "category": "Informational"
     },
     {
@@ -23,7 +23,7 @@
     {
       "id": 4,
       "question": "How do I use GlowBoost Vitamin C Serum?",
-      "answer": "Apply 2–3 drops in the morning before sunscreen",
+      "answer": "Apply as directed",
       "category": "Usage"
     },
     {
@@ -59,7 +59,7 @@
     {
       "id": 10,
       "question": "How much does GlowBoost Vitamin C Serum cost?",
-      "answer": "The price is ₹699.",
+      "answer": "The price is ₹699.0.",
       "category": "Purchase"
     },
     {
@@ -71,7 +71,7 @@
     {
       "id": 12,
       "question": "Is this product worth the price?",
-      "answer": "At ₹699, this product offers excellent value with high-quality ingredients and proven results.",
+      "answer": "At ₹699.0, this product offers excellent value with high-quality ingredients and proven results.",
       "category": "Purchase"
     },
     {
@@ -93,5 +93,5 @@
       "category": "Results"
     }
   ],
-  "generated_at": "2025-12-27T17:06:14.278705"
+  "generated_at": "2026-01-01T14:51:42.165820"
 }

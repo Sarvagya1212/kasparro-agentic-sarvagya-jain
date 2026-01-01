@@ -53,7 +53,7 @@ class TestPipeline:
         assert os.path.exists(output_path)
 
         # Validate JSON
-        with open(output_path, "r") as f:
+        with open(output_path, "r", encoding="utf-8") as f:
             data = json.load(f)
             assert data == result
 
@@ -119,7 +119,7 @@ class TestPipeline:
 
         # Verify all are valid JSON
         for path in [faq_path, product_path, comparison_path]:
-            with open(path, "r") as f:
+            with open(path, "r", encoding="utf-8") as f:
                 data = json.load(f)
                 assert isinstance(data, dict)
 
