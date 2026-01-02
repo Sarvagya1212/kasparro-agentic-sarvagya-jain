@@ -72,7 +72,7 @@ class QuestionsWorker:
     """Generate FAQ questions - activates at SYNTHESIS stage."""
 
     FAQ_BUFFER = 20  # Request more than needed
-    MIN_REQUIRED = 15
+    MIN_FAQ_QUESTIONS = 15
 
     dependencies = ["product_input"]  # What this worker needs
 
@@ -84,7 +84,7 @@ class QuestionsWorker:
         return (
             state.stage == ProcessingStage.SYNTHESIS
             and state.product_input is not None
-            and len(state.generated_content.faq_questions) < self.MIN_REQUIRED
+            and len(state.generated_content.faq_questions) < self.MIN_FAQ_QUESTIONS
         )
 
     def run(
@@ -185,7 +185,7 @@ class ComparisonWorker:
 class ValidationWorker:
     """Validate results - activates at VERIFICATION stage."""
 
-    MIN_FAQ_THRESHOLD = 15  # Critical requirement
+    MIN_FAQ_QUESTIONS = 15  # Critical requirement
 
     dependencies = ["product_input", "generated_content"]  # What this worker needs
 
@@ -199,7 +199,7 @@ class ValidationWorker:
     def run(
         self, context: GlobalContext, directive: Optional[TaskDirective] = None
     ) -> AgentResult:
-        logger.info(f"{self.name}: Validating (threshold={self.MIN_FAQ_THRESHOLD})...")
+        logger.info(f"{self.name}: Validating (threshold={self.MIN_FAQ_QUESTIONS})...")
 
         errors = []
 
@@ -209,8 +209,8 @@ class ValidationWorker:
 
         # Check FAQ count
         faq_count = len(context.generated_content.faq_questions)
-        if faq_count < self.MIN_FAQ_THRESHOLD:
-            errors.append(f"FAQ count {faq_count} < {self.MIN_FAQ_THRESHOLD}")
+        if faq_count < self.MIN_FAQ_QUESTIONS:
+            errors.append(f"FAQ count {faq_count} < {self.MIN_FAQ_QUESTIONS}")
 
             # Return Rejection to trigger re-run
             context.errors = errors
@@ -219,7 +219,7 @@ class ValidationWorker:
                 status=AgentStatus.VALIDATION_FAILED,
                 context=context,
                 message=(
-                    f"Rejection: Need {self.MIN_FAQ_THRESHOLD} FAQs, "
+                    f"Rejection: Need {self.MIN_FAQ_QUESTIONS} FAQs, "
                     f"got {faq_count}"
                 ),
             )
