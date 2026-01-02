@@ -184,7 +184,7 @@ Product A: {product_a.get('name', 'Product A')}
 - Ingredients: {', '.join(product_a.get('key_ingredients', []))}
 - Skin Types: {', '.join(product_a.get('skin_types', []))}
 
-Product B: {product_b.get('name', 'Product B')}  
+Product B: {product_b.get('name', 'Product B')}
 - Price: ₹{product_b.get('price', 0)}
 - Ingredients: {', '.join(product_b.get('key_ingredients', []))}
 - Skin Types: {', '.join(product_b.get('skin_types', []))}
