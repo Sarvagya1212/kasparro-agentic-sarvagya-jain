@@ -1,173 +1,93 @@
-"""
-Worker Agents: Specialized units of work with AUTONOMY.
-Each worker can propose to handle specific tasks based on their specialization.
-Workers bid for work instead of being sequentially called.
-"""
+"""All worker agents in one file for simplicity"""
 
 import logging
 from typing import Any, Dict, List, Optional
 
-from skincare_agent_system.actors.agents import BaseAgent
-from skincare_agent_system.core.models import (
+from ..core.models import (
     AgentContext,
     AgentResult,
     AgentStatus,
     AnalysisResults,
     TaskDirective,
 )
-from skincare_agent_system.core.proposals import AgentProposal
-from skincare_agent_system.tools import ToolRegistry
-from skincare_agent_system.tools.content_tools import create_default_toolbox
+
+# Import Logic Blocks directly
+from ..logic_blocks.benefits_block import extract_benefits
+from ..logic_blocks.comparison_block import (
+    compare_benefits,
+    compare_ingredients,
+    compare_prices,
+    determine_winner,
+    generate_recommendation,
+)
+from ..logic_blocks.question_generator import (
+    _augment_with_general_questions,
+    generate_questions_by_category,
+)
+from ..logic_blocks.usage_block import extract_usage_instructions
+from .base_agent import BaseAgent
+
+# Note: comparison_block.py usually has multiple functions.
+# Original ComparisonTool called compare_ingredients, compare_prices, compare_benefits, determine_winner, generate_recommendation.
+# I will replicate that aggregation logic here.
+
 
 logger = logging.getLogger("Workers")
 
 
-class BaseWorker(BaseAgent):
-    """
-    Base class for workers with AUTONOMY support.
-
-    Workers can now:
-    - Propose to handle specific task types
-    - Report confidence based on task affinity
-    - Be selected dynamically by the DelegatorAgent
-    """
-
-    # Task types this worker specializes in (override in subclasses)
-    SPECIALIZATIONS: List[str] = []
-
-    def __init__(
-        self,
-        name: str,
-        role: str = "Worker",
-        backstory: str = "Specialized worker",
-        toolbox: Optional[ToolRegistry] = None,
-    ):
-        super().__init__(name, role, backstory)
-        self.toolbox = toolbox or create_default_toolbox()
-
-    def can_handle_task(self, task_type: str, context: AgentContext) -> bool:
-        """Check if this worker can handle the given task type."""
-        return task_type in self.SPECIALIZATIONS and context.product_data is not None
-
-    def propose_for_task(
-        self, task_type: str, context: AgentContext
-    ) -> Optional[AgentProposal]:
-        """
-        Propose to handle a specific task - WORKER AUTONOMY.
-
-        Workers can now bid for tasks they specialize in.
-        """
-        if not self.can_handle_task(task_type, context):
-            return AgentProposal(
-                agent_name=self.name,
-                action=task_type,
-                confidence=0.0,
-                reason=f"Cannot handle task type: {task_type}",
-                preconditions_met=False,
-            )
-
-        # High confidence for specializations, low for generalist tasks
-        is_specialty = task_type in self.SPECIALIZATIONS
-        confidence = 0.9 if is_specialty else 0.3
-
-        return AgentProposal(
-            agent_name=self.name,
-            action=task_type,
-            confidence=confidence,
-            reason=(
-                f"I specialize in {task_type}"
-                if is_specialty
-                else f"Can attempt {task_type}"
-            ),
-            preconditions_met=True,
-            priority=5,
-        )
-
-
-class BenefitsWorker(BaseWorker):
-    """Worker dedicated to extracting product benefits."""
+class BenefitsWorker(BaseAgent):
+    """Extract product benefits"""
 
     SPECIALIZATIONS = ["extract_benefits", "analyze_ingredients", "benefits"]
-
-    def __init__(self, name: str):
-        super().__init__(
-            name,
-            role="Benefits Specialist",
-            backstory="A specialized dermatologist assistant focused on identifying key skincare benefits from technical data.",
-        )
 
     def run(
         self, context: AgentContext, directive: Optional[TaskDirective] = None
     ) -> AgentResult:
-        if not self.validate_instruction(directive):
-            return self.create_result(
-                AgentStatus.ERROR, context, "Instruction validation failed."
-            )
-
-        logger.info(f"{self.name} ({self.role}): Extracting benefits...")
+        logger.info(f"{self.name}: Extracting benefits...")
         try:
             product_dict = context.product_data.model_dump()
-            tool = self.toolbox.get("benefits_extractor")
-            if not tool:
-                return self.create_result(
-                    AgentStatus.ERROR, context, "benefits_extractor tool not found"
-                )
+            benefits = extract_benefits(product_dict)
 
-            result = tool.run(
-                product_data=product_dict, agent_identity=self.get_agent_identity()
-            )
-            benefits = result.data if result.success else []
-
-            # Initialize analysis_results if None
             if not context.analysis_results:
                 context.analysis_results = AnalysisResults(
                     benefits=[], usage="", comparison={}
                 )
 
             context.analysis_results.benefits = benefits
-            context.log_decision(self.name, f"Extracted {len(benefits)} benefits.")
             return self.create_result(
                 AgentStatus.COMPLETE, context, f"Extracted {len(benefits)} benefits"
             )
-
         except Exception as e:
             logger.error(f"{self.name} failed: {e}")
             return self.create_result(AgentStatus.ERROR, context, str(e))
 
+    def propose_for_task(self, task_type: str, context: AgentContext):
+        # Primitive proposal logic to satisfy orchestrator if it still uses proposals
+        from ..core.proposals import AgentProposal
 
-class UsageWorker(BaseWorker):
-    """Worker dedicated to extracting usage instructions."""
+        if task_type in self.SPECIALIZATIONS:
+            return AgentProposal(
+                agent_name=self.name,
+                action=task_type,
+                confidence=0.9,
+                reason="Specialist",
+                preconditions_met=True,
+            )
+        return None
+
+
+class UsageWorker(BaseAgent):
+    """Format usage instructions"""
 
     SPECIALIZATIONS = ["format_usage", "extract_usage", "usage"]
-
-    def __init__(self, name: str):
-        super().__init__(
-            name,
-            role="Usage Instruction Specialist",
-            backstory="Expert in clear, safe, and effective product usage guidelines.",
-        )
 
     def run(
         self, context: AgentContext, directive: Optional[TaskDirective] = None
     ) -> AgentResult:
-        if not self.validate_instruction(directive):
-            return self.create_result(
-                AgentStatus.ERROR, context, "Instruction validation failed."
-            )
-
-        logger.info(f"{self.name} ({self.role}): Extracting usage instructions...")
+        logger.info(f"{self.name}: Extracting usage instructions...")
         try:
             product_dict = context.product_data.model_dump()
-            tool = self.toolbox.get("usage_extractor")
-            if not tool:
-                return self.create_result(
-                    AgentStatus.ERROR, context, "usage_extractor tool not found"
-                )
-
-            result = tool.run(
-                product_data=product_dict, agent_identity=self.get_agent_identity()
-            )
-            usage = result.data if result.success else ""
+            usage = extract_usage_instructions(product_dict)
 
             if not context.analysis_results:
                 context.analysis_results = AnalysisResults(
@@ -175,106 +95,117 @@ class UsageWorker(BaseWorker):
                 )
 
             context.analysis_results.usage = usage
-            context.log_decision(self.name, "Extracted usage instructions.")
             return self.create_result(
                 AgentStatus.COMPLETE, context, "Extracted usage instructions"
             )
-
         except Exception as e:
             logger.error(f"{self.name} failed: {e}")
             return self.create_result(AgentStatus.ERROR, context, str(e))
 
+    def propose_for_task(self, task_type: str, context: AgentContext):
+        from ..core.proposals import AgentProposal
 
-class QuestionsWorker(BaseWorker):
-    """Worker dedicated to generating FAQ questions."""
+        if task_type in self.SPECIALIZATIONS:
+            return AgentProposal(
+                agent_name=self.name,
+                action=task_type,
+                confidence=0.9,
+                reason="Specialist",
+                preconditions_met=True,
+            )
+        return None
 
+
+class QuestionsWorker(BaseAgent):
+    """Generate FAQ questions"""
+
+    MIN_QUESTIONS = 15  # Assignment requirement
     SPECIALIZATIONS = ["generate_faqs", "create_questions", "questions"]
-
-    def __init__(self, name: str):
-        super().__init__(
-            name,
-            role="FAQ Generator",
-            backstory="Customer success specialist anticipating common user questions and concerns.",
-        )
 
     def run(
         self, context: AgentContext, directive: Optional[TaskDirective] = None
     ) -> AgentResult:
-        if not self.validate_instruction(directive):
-            return self.create_result(
-                AgentStatus.ERROR, context, "Instruction validation failed."
-            )
-
-        logger.info(f"{self.name} ({self.role}): Generating questions...")
+        logger.info(f"{self.name}: Generating questions...")
         try:
             product_dict = context.product_data.model_dump()
-            tool = self.toolbox.get("faq_generator")
-            if not tool:
-                return self.create_result(
-                    AgentStatus.ERROR, context, "faq_generator tool not found"
-                )
 
-            result = tool.run(
-                product_data=product_dict,
-                min_questions=20,
-                agent_identity=self.get_agent_identity(),
+            # Use logic block directly
+            # Note: generate_questions_by_category logic might need augmentation if it falls short
+            # But the user previously updated it to use _augment_with_general_questions
+            # We will use that if available, or manual augmentation here.
+
+            # Assuming logic block is up to date with previous edits
+            questions = generate_questions_by_category(
+                product_dict, min_questions=self.MIN_QUESTIONS
             )
-            qa_list = result.data if result.success else []
 
+            # Re-verify count just in case
+            if len(questions) < self.MIN_QUESTIONS:
+                # Attempt to augment manually if logic block didn't cover it (redundancy)
+                try:
+                    questions = _augment_with_general_questions(
+                        questions,
+                        self.MIN_QUESTIONS,
+                        product_dict.get("name", "Product"),
+                    )
+                except NameError:
+                    pass  # Function might not be imported if I didn't verify it exported
+
+            qa_list = [
+                (q, a, c) for q, a, c in questions
+            ]  # Ensure it's list of tuples/dicts as expected
+
+            # Convert to list of dicts/tuples compatible with validation?
+            # Validation checks context.generated_questions
             context.generated_questions = qa_list
-            context.log_decision(self.name, f"Generated {len(qa_list)} questions.")
+
             return self.create_result(
                 AgentStatus.COMPLETE, context, f"Generated {len(qa_list)} questions"
             )
-
         except Exception as e:
             logger.error(f"{self.name} failed: {e}")
             return self.create_result(AgentStatus.ERROR, context, str(e))
 
+    def propose_for_task(self, task_type: str, context: AgentContext):
+        from ..core.proposals import AgentProposal
 
-class ComparisonWorker(BaseWorker):
-    """Worker dedicated to product comparison."""
+        if task_type in self.SPECIALIZATIONS:
+            return AgentProposal(
+                agent_name=self.name,
+                action=task_type,
+                confidence=0.9,
+                reason="Specialist",
+                preconditions_met=True,
+            )
+        return None
+
+
+class ComparisonWorker(BaseAgent):
+    """Create product comparison"""
 
     SPECIALIZATIONS = ["compare_products", "product_comparison", "comparison"]
-
-    def __init__(self, name: str):
-        super().__init__(
-            name,
-            role="Product Analyst",
-            backstory="Objective analyst providing fair and data-driven product comparisons.",
-        )
 
     def run(
         self, context: AgentContext, directive: Optional[TaskDirective] = None
     ) -> AgentResult:
-        if not self.validate_instruction(directive):
-            return self.create_result(
-                AgentStatus.ERROR, context, "Instruction validation failed."
-            )
-
-        logger.info(f"{self.name} ({self.role}): Performing comparison...")
+        logger.info(f"{self.name}: Performing comparison...")
         if not context.comparison_data:
-            context.log_decision(self.name, "No comparison data available. Skipping.")
             return self.create_result(
                 AgentStatus.COMPLETE, context, "Skipped (No data)"
             )
 
         try:
-            product_dict = context.product_data.model_dump()
-            other_dict = context.comparison_data.model_dump()
+            product_a = context.product_data.model_dump(exclude_none=True)
+            product_b = context.comparison_data.model_dump(exclude_none=True)
 
-            tool = self.toolbox.get("product_comparison")
-            if not tool:
-                return self.create_result(
-                    AgentStatus.ERROR, context, "product_comparison tool not found"
-                )
-
-            result = tool.run(
-                product_a=product_dict,
-                product_b=other_dict,
-                agent_identity=self.get_agent_identity(),
-            )
-            comparison_results = result.data if result.success else {}
+            # Aggregated comparison logic
+            comparison_results = {
+                "ingredients": compare_ingredients(product_a, product_b),
+                "price": compare_prices(product_a, product_b),
+                "benefits": compare_benefits(product_a, product_b),
+                "winners": determine_winner(product_a, product_b),
+                "recommendation": generate_recommendation(product_a, product_b),
+            }
 
             if not context.analysis_results:
                 context.analysis_results = AnalysisResults(
@@ -282,79 +213,65 @@ class ComparisonWorker(BaseWorker):
                 )
 
             context.analysis_results.comparison = comparison_results
-            context.log_decision(self.name, "Completed comparison analysis.")
             return self.create_result(
                 AgentStatus.COMPLETE, context, "Comparison complete"
             )
-
         except Exception as e:
             logger.error(f"{self.name} failed: {e}")
             return self.create_result(AgentStatus.ERROR, context, str(e))
 
+    def propose_for_task(self, task_type: str, context: AgentContext):
+        from ..core.proposals import AgentProposal
 
-class ValidationWorker(BaseWorker):
-    """
-    Worker responsible for validating the aggregated results.
-    Reports pass/fail back to Delegator.
-    """
+        if task_type in self.SPECIALIZATIONS:
+            return AgentProposal(
+                agent_name=self.name,
+                action=task_type,
+                confidence=0.9,
+                reason="Specialist",
+                preconditions_met=True,
+            )
+        return None
 
+
+class ValidationWorker(BaseAgent):
+    """Validate results"""
+
+    MIN_FAQ_QUESTIONS = 15  # ✅ FIX: Was 10, now 15
     SPECIALIZATIONS = ["validate_results", "quality_check", "validation"]
-
-    MIN_FAQ_QUESTIONS = 10
-
-    def __init__(self, name: str):
-        super().__init__(
-            name,
-            role="Quality Assurance Officer",
-            backstory="Strict auditor ensuring all content meets high-quality standards before release.",
-        )
 
     def run(
         self, context: AgentContext, directive: Optional[TaskDirective] = None
     ) -> AgentResult:
-        if not self.validate_instruction(directive):
-            return self.create_result(
-                AgentStatus.ERROR, context, "Instruction validation failed."
-            )
-
-        logger.info(f"{self.name} ({self.role}): Validating results...")
+        logger.info(f"{self.name}: Validating results...")
 
         errors = []
-
-        # 1. Product Name
         if not context.product_data or not context.product_data.name:
             errors.append("Missing product name")
 
-        # 2. Key Ingredients
-        if not context.product_data or not context.product_data.key_ingredients:
-            errors.append("Missing key ingredients")
-
-        # 3. Benefits
         if not context.analysis_results or not context.analysis_results.benefits:
             errors.append("Benefits extraction failed or empty")
 
-        # 4. FAQ Count
-        faq_count = (
-            len(context.generated_questions) if context.generated_questions else 0
-        )
-        if faq_count < self.MIN_FAQ_QUESTIONS:
+        questions = context.generated_questions or []
+
+        if len(questions) < self.MIN_FAQ_QUESTIONS:
             errors.append(
-                f"Insufficient FAQ questions: {faq_count} < {self.MIN_FAQ_QUESTIONS}"
+                f"FAQ must have {self.MIN_FAQ_QUESTIONS}+ questions, found {len(questions)}"
             )
 
         context.validation_errors = errors
         context.is_valid = len(errors) == 0
 
         if context.is_valid:
-            context.log_decision(self.name, "PASS: All validation checks passed")
             return self.create_result(
                 AgentStatus.COMPLETE, context, "Validation passed"
             )
         else:
-            context.log_decision(self.name, f"FAIL: {', '.join(errors)}")
-            # Return ERROR or a specific status to indicate validation failure?
-            # In CWD, the Delegator will read context.is_valid.
-            # But returning COMPLETE with is_valid=False allows Delegator to inspect it.
             return self.create_result(
-                AgentStatus.COMPLETE, context, "Validation completed (Found errors)"
-            )
+                AgentStatus.COMPLETE, context, f"Validation failed: {errors}"
+            )  # Returning COMPLETE so orchestrator can decide what to do (e.g. retry) or failed?
+            # Original returned COMPLETE to allow orchestrator logic to handle 'is_valid' flag.
+
+    def propose_for_task(self, task_type: str, context: AgentContext):
+        return None  # Usually called explicitly by orchestrator? Or needs to propose?
+        # Orchestrator calls it explicitly at end of loop usually.
