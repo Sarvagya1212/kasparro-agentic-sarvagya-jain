@@ -345,7 +345,7 @@ class OfflineRuleProvider(IIntelligenceProvider):
             questions.append(
                 (
                     f"How long until I see results?",
-                    f"Most users notice {benefit_text.lower()} within 2-4 weeks of consistent use.",
+                    f"Most users notice {benefit_text.lower()} within 2-4 weeks of consistent use.",  # noqa: E501
                     "Results",
                 )
             )
@@ -438,11 +438,13 @@ class OfflineRuleProvider(IIntelligenceProvider):
                 "Hyaluronic Acid provides deep hydration " "and plumps the skin."
             ),
             "retinol": "Retinol promotes cell turnover and reduces fine lines.",
-            "niacinamide": ("Niacinamide minimizes pores and controls oil production."),
+            "niacinamide": (
+                "Niacinamide minimizes pores and controls oil production."
+            ),
             "salicylic": "Salicylic Acid unclogs pores and treats acne.",
             "glycolic": "Glycolic Acid exfoliates for smoother, brighter skin.",
             "ferulic": "Ferulic Acid enhances antioxidant stability and protection.",
-            "vitamin e": "Vitamin E moisturizes and protects against environmental damage.",
+            "vitamin e": "Vitamin E moisturizes and protects against environmental damage.",  # noqa: E501
         }
 
         for key, benefit in benefits_map.items():
