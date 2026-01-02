@@ -4,7 +4,8 @@ Emits events for traceability.
 """
 
 import logging
-from typing import Dict, List, Optional
+from typing import Dict, Optional
+
 
 from skincare_agent_system.core.models import (
     GlobalContext,

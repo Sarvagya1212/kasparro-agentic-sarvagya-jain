@@ -6,7 +6,8 @@ No complex bidding, just can_handle() boolean checks.
 import logging
 from typing import List, Optional
 
-from skincare_agent_system.core.models import GlobalContext, ProcessingStage
+from skincare_agent_system.core.models import GlobalContext
+
 
 logger = logging.getLogger("Router")
 

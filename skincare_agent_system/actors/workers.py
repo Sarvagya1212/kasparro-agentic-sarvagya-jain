@@ -10,7 +10,7 @@ from ..core.models import (
     ProcessingStage,
     TaskDirective,
 )
-from ..core.proposals import Rejection
+
 
 from ..logic_blocks.comparison_block import (
     compare_benefits,
