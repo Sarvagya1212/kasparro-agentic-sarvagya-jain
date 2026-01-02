@@ -54,14 +54,18 @@ jobs:
         python -m pip install --upgrade pip
         pip install flake8 black isort mypy
 
-    - name: Run flake8
-      run: |
-        flake8 skincare_agent_system --count --select=E9,F63,F7,F82 --show-source --statistics
-        flake8 skincare_agent_system --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+    - name: Run black check
+      run: black --check .
 
     - name: Check import sorting with isort
+      run: isort --check-only --profile black skincare_agent_system
+
+    - name: Run flake8
       run: |
-        isort --check-only --profile black skincare_agent_system || echo "isort check skipped"
+        # Stop the build if there are Python syntax errors or undefined names
+        flake8 skincare_agent_system --count --select=E9,F63,F7,F82 --show-source --statistics
+        # Enforce strict line length of 88 (matching black) and fail on errors
+        flake8 skincare_agent_system --count --max-complexity=10 --max-line-length=88 --statistics
 
   build:
     runs-on: ubuntu-latest
