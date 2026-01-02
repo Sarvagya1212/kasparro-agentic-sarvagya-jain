@@ -8,7 +8,8 @@ import logging
 import os
 import time
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Tuple
+
 
 logger = logging.getLogger("Providers")
 
