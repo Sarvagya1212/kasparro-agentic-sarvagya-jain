@@ -3,6 +3,7 @@ Agent Action Proposals: True Agent Autonomy.
 Agents propose actions based on context assessment, not orchestrator commands.
 """
 
+import asyncio
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime

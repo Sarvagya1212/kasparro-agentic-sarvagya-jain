@@ -3,6 +3,7 @@ Advanced Reasoning: Chain of Thought (CoT) and ReAct patterns.
 Now with LLM-powered reasoning when API key is available.
 """
 
+import json
 import logging
 import os
 from dataclasses import dataclass, field
