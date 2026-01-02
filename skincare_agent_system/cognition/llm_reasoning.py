@@ -85,21 +85,13 @@ class ReasoningEngine:
                 agent_name, context_summary, task_description
             )
 
-    def _fallback_reasoning(
-        self, agent_name: str, context: Dict, task: str
-    ) -> ReasoningResult:
-        """
-        Fallback when LLM unavailable.
-        Returns a conservative 'don't act' result to avoid hallucinating decisions.
-        """
-        return ReasoningResult(
-            should_act=False,
-            confidence=0.0,
-            reasoning="LLM reasoning unavailable - defaulting to safe state",
-            complexity="n/a",
-            prerequisites_met=False,
-            risks=["LLM unavailable"],
-        )
+    def _build_reasoning_prompt(
+        self,
+        agent_name: str,
+        task: str,
+        context: Dict,
+        constraints: Optional[Dict],
+    ) -> str:
         """Build chain-of-thought reasoning prompt"""
 
         # Format context nicely
@@ -236,15 +228,14 @@ Respond ONLY with valid JSON (no markdown):
                 risks=["Blocked dependencies"],
             )
 
-        # Default: act with medium confidence
+        # Default: LLM failed, so we cannot reason safely
         return ReasoningResult(
-            should_act=True,
-            confidence=0.7,
-            reasoning=(
-                f"Heuristic decision: Prerequisites met, " f"proceeding with {task}"
-            ),
-            complexity="medium",
-            prerequisites_met=True,
+            should_act=False,
+            confidence=0.0,
+            reasoning="LLM reasoning unavailable - defaulting to safe state (no action)",
+            complexity="n/a",
+            prerequisites_met=False,
+            risks=["LLM unavailable"],
         )
 
     def calculate_dynamic_confidence(
