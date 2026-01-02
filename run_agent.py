@@ -124,11 +124,13 @@ def generate_comparison_json(context: GlobalContext) -> dict:
             "benefits": product_b.benefits if product_b else []
         },
         "differences": comparison_data.get("differences", []),
-        "recommendation": comparison_data.get("recommendation", "No recommendation generated."),
-        "winner_categories": comparison_data.get("winners", {})
+        # Use the actual generated recommendation from comparison_block
+        "recommendation": comparison_data.get("recommendation", "No comparison available."),
+        "winner_categories": comparison_data.get("winner", {})
     }
     
     return template.render(data)
+
 
 
 def main():
