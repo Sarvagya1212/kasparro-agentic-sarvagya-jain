@@ -1,0 +1,40 @@
+{
+  "product": "GlowBoost Vitamin C Serum",
+  "benefits": [
+    "Brightening",
+    "Anti-aging",
+    "Hydration",
+    "Even skin tone",
+    "Brightening and antioxidant protection",
+    "Deep hydration and plumping",
+    "Pore refinement and oil control"
+  ],
+  "usage": "Follow product instructions for best results.",
+  "questions_count": 0,
+  "is_valid": false,
+  "validation_errors": [
+    "FAQ must have 15+ questions, found 0"
+  ],
+  "execution_history": [
+    "Running BenefitsWorker",
+    "Running UsageWorker",
+    "Running ValidationWorker",
+    "Running ValidationWorker",
+    "Running ValidationWorker",
+    "Running ValidationWorker",
+    "Running ValidationWorker",
+    "Running ValidationWorker",
+    "Running ValidationWorker",
+    "Running ValidationWorker",
+    "Running ValidationWorker",
+    "Running ValidationWorker",
+    "Running ValidationWorker",
+    "Running ValidationWorker",
+    "Running ValidationWorker",
+    "Running ValidationWorker",
+    "Running ValidationWorker",
+    "Running ValidationWorker",
+    "Running ValidationWorker",
+    "Running ValidationWorker"
+  ]
+}

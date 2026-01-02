@@ -165,6 +165,29 @@ class BenefitsWorker(BaseAgent):
             )
         return None
 
+    def propose(self, context: AgentContext) -> AgentProposal:
+        """Propose benefits extraction using goal-driven assessment"""
+        assessment = self.assess_context(context)
+        
+        if not assessment['should_act']:
+            return AgentProposal(
+                agent_name=self.name,
+                action="extract_benefits",
+                confidence=0.0,
+                reason=assessment['reasoning'],
+                preconditions_met=False,
+                priority=0
+            )
+        
+        return AgentProposal(
+            agent_name=self.name,
+            action="extract_benefits",
+            confidence=assessment['confidence'],
+            reason=assessment['reasoning'],
+            preconditions_met=True,
+            priority=7
+        )
+
 
 
 class UsageWorker(BaseAgent):
@@ -194,8 +217,6 @@ class UsageWorker(BaseAgent):
             return self.create_result(AgentStatus.ERROR, context, str(e))
 
     def propose_for_task(self, task_type: str, context: AgentContext):
-        from ..core.proposals import AgentProposal
-
         if task_type in self.SPECIALIZATIONS:
             return AgentProposal(
                 agent_name=self.name,
@@ -205,6 +226,43 @@ class UsageWorker(BaseAgent):
                 preconditions_met=True,
             )
         return None
+
+    def propose(self, context: AgentContext) -> AgentProposal:
+        """Propose usage extraction"""
+        has_data = context.product_data is not None
+        already_done = (
+            context.analysis_results is not None 
+            and context.analysis_results.usage
+        )
+        
+        if not has_data:
+            return AgentProposal(
+                agent_name=self.name,
+                action="extract_usage",
+                confidence=0.0,
+                reason="No product data",
+                preconditions_met=False,
+                priority=0
+            )
+        
+        if already_done:
+            return AgentProposal(
+                agent_name=self.name,
+                action="extract_usage",
+                confidence=0.0,
+                reason="Usage already extracted",
+                preconditions_met=True,
+                priority=0
+            )
+        
+        return AgentProposal(
+            agent_name=self.name,
+            action="extract_usage",
+            confidence=0.85,
+            reason="Product data available, ready to extract usage",
+            preconditions_met=True,
+            priority=5
+        )
 
 
 class QuestionsWorker(BaseAgent):
@@ -258,8 +316,6 @@ class QuestionsWorker(BaseAgent):
             return self.create_result(AgentStatus.ERROR, context, str(e))
 
     def propose_for_task(self, task_type: str, context: AgentContext):
-        from ..core.proposals import AgentProposal
-
         if task_type in self.SPECIALIZATIONS:
             return AgentProposal(
                 agent_name=self.name,
@@ -269,6 +325,40 @@ class QuestionsWorker(BaseAgent):
                 preconditions_met=True,
             )
         return None
+
+    def propose(self, context: AgentContext) -> AgentProposal:
+        """Propose question generation"""
+        has_data = context.product_data is not None
+        already_done = len(context.generated_questions) >= self.MIN_QUESTIONS
+        
+        if not has_data:
+            return AgentProposal(
+                agent_name=self.name,
+                action="generate_faqs",
+                confidence=0.0,
+                reason="No product data",
+                preconditions_met=False,
+                priority=0
+            )
+        
+        if already_done:
+            return AgentProposal(
+                agent_name=self.name,
+                action="generate_faqs",
+                confidence=0.0,
+                reason=f"Already have {len(context.generated_questions)} questions",
+                preconditions_met=True,
+                priority=0
+            )
+        
+        return AgentProposal(
+            agent_name=self.name,
+            action="generate_faqs",
+            confidence=0.80,
+            reason="Ready to generate FAQ questions",
+            preconditions_met=True,
+            priority=6
+        )
 
 
 class ComparisonWorker(BaseAgent):
@@ -312,8 +402,6 @@ class ComparisonWorker(BaseAgent):
             return self.create_result(AgentStatus.ERROR, context, str(e))
 
     def propose_for_task(self, task_type: str, context: AgentContext):
-        from ..core.proposals import AgentProposal
-
         if task_type in self.SPECIALIZATIONS:
             return AgentProposal(
                 agent_name=self.name,
@@ -323,6 +411,46 @@ class ComparisonWorker(BaseAgent):
                 preconditions_met=True,
             )
         return None
+
+    def propose(self, context: AgentContext) -> AgentProposal:
+        """Propose product comparison"""
+        has_both = (
+            context.product_data is not None 
+            and context.comparison_data is not None
+        )
+        already_done = (
+            context.analysis_results is not None 
+            and context.analysis_results.comparison
+        )
+        
+        if not has_both:
+            return AgentProposal(
+                agent_name=self.name,
+                action="compare_products",
+                confidence=0.0,
+                reason="Need both products for comparison",
+                preconditions_met=False,
+                priority=0
+            )
+        
+        if already_done:
+            return AgentProposal(
+                agent_name=self.name,
+                action="compare_products",
+                confidence=0.0,
+                reason="Comparison already complete",
+                preconditions_met=True,
+                priority=0
+            )
+        
+        return AgentProposal(
+            agent_name=self.name,
+            action="compare_products",
+            confidence=0.82,
+            reason="Both products available, ready to compare",
+            preconditions_met=True,
+            priority=5
+        )
 
 
 class ValidationWorker(BaseAgent):

@@ -4,7 +4,7 @@ Simplified for Phase 1.
 """
 
 import logging
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 from skincare_agent_system.actors.base_agent import BaseAgent
 from skincare_agent_system.core.models import (
