@@ -252,7 +252,10 @@ class OfflineRuleProvider(IIntelligenceProvider):
         questions.append(
             (
                 f"What is {name}?",
-                f"{name} is a skincare product containing {', '.join(ingredients) if ingredients else 'active ingredients'}.",
+                (
+                    f"{name} is a skincare product containing "
+                    f"{', '.join(ingredients) if ingredients else 'active ingredients'}."
+                ),
                 "Informational",
             )
         )
@@ -413,7 +416,10 @@ class OfflineRuleProvider(IIntelligenceProvider):
         ingredient_lower = ingredient.lower()
 
         benefits_map = {
-            "vitamin c": "Vitamin C is a powerful antioxidant that brightens skin and reduces dark spots.",
+            "vitamin c": (
+                "Vitamin C is a powerful antioxidant that brightens skin "
+                "and reduces dark spots."
+            ),
             "hyaluronic": "Hyaluronic Acid provides deep hydration and plumps the skin.",
             "retinol": "Retinol promotes cell turnover and reduces fine lines.",
             "niacinamide": "Niacinamide minimizes pores and controls oil production.",
