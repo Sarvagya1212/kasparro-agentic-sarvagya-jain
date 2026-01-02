@@ -36,12 +36,10 @@ class IIntelligenceProvider(ABC):
         response = self.generate(prompt, **kwargs)
         return json.loads(response)
 
+    @abstractmethod
     def generate_faq(self, product_data: Dict) -> List[Tuple[str, str, str]]:
         """Default FAQ generation - override if needed."""
-        prompt = f"Generate 20 FAQs for product: {product_data.get('name', '')}"
-        response = self.generate(prompt)
-        # Parse response into tuples
-        return []
+        pass
 
 
 # ============================================================================

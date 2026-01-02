@@ -16,7 +16,6 @@ def generate_questions_by_category(
 
     This module generates questions for FAQ content.
     Uses MistralProvider for question generation.
-    Falls back to provider's default if LLM fails.
     """
     from ..infrastructure.providers import get_provider
 

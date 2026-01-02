@@ -85,13 +85,21 @@ class ReasoningEngine:
                 agent_name, context_summary, task_description
             )
 
-    def _build_reasoning_prompt(
-        self,
-        agent_name: str,
-        task: str,
-        context: Dict,
-        constraints: Optional[Dict],
-    ) -> str:
+    def _fallback_reasoning(
+        self, agent_name: str, context: Dict, task: str
+    ) -> ReasoningResult:
+        """
+        Fallback when LLM unavailable.
+        Returns a conservative 'don't act' result to avoid hallucinating decisions.
+        """
+        return ReasoningResult(
+            should_act=False,
+            confidence=0.0,
+            reasoning="LLM reasoning unavailable - defaulting to safe state",
+            complexity="n/a",
+            prerequisites_met=False,
+            risks=["LLM unavailable"],
+        )
         """Build chain-of-thought reasoning prompt"""
 
         # Format context nicely

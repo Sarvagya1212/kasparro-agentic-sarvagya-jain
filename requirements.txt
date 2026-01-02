@@ -20,3 +20,6 @@ pre-commit>=3.6.0
 # Architecture
 langgraph>=0.0.10
 langchain-core>=0.1.0
+
+# Environment
+python-dotenv>=1.0.0
