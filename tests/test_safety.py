@@ -5,15 +5,15 @@ Run with: pytest tests/test_safety.py
 
 import pytest
 
-from skincare_agent_system.guardrails import Guardrails
-from skincare_agent_system.hitl import HITLGate, reset_hitl_gate
-from skincare_agent_system.models import (
+from skincare_agent_system.actors.verifier import VerifierAgent
+from skincare_agent_system.core.models import (
     AgentContext,
     AgentStatus,
     AnalysisResults,
     ProductData,
 )
-from skincare_agent_system.verifier import VerifierAgent
+from skincare_agent_system.security.guardrails import Guardrails
+from skincare_agent_system.security.hitl import HITLGate, reset_hitl_gate
 
 
 class TestGuardrails:

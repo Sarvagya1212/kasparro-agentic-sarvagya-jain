@@ -1,206 +1,294 @@
-# Multi-Agent Content Generation System
+# Skincare Agent System (SAS)
 
-[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
-[![Tests](https://img.shields.io/badge/tests-142%20passing-green.svg)]()
-[![CI](https://img.shields.io/badge/CI-passing-brightgreen.svg)]()
-
-> **Kasparro Applied AI Engineer Assignment** — A modular agentic automation system that transforms product data into structured, machine-readable content pages.
+**An autonomous multi-agent system for intelligent skincare content generation using dynamic proposal-based orchestration.**
 
 ---
 
-## 🎯 Assignment Requirements ✅
+## Overview
 
-| Requirement | Status | Implementation |
-|-------------|--------|----------------|
-| Parse & understand product data | ✅ | `ProductData` Pydantic model |
-| Generate 15+ categorized questions | ✅ | `QuestionsWorker` (5 categories) |
-| FAQ Template | ✅ | `templates/faq_template.py` |
-| Product Description Template | ✅ | `templates/product_page_template.py` |
-| Comparison Template | ✅ | `templates/comparison_template.py` |
-| Reusable content logic blocks | ✅ | `logic_blocks/` (4 blocks) |
-| FAQ Page JSON | ✅ | `output/faq.json` |
-| Product Page JSON | ✅ | `output/product_page.json` |
-| Comparison Page JSON | ✅ | `output/comparison_page.json` |
-| Pipeline runs via agents | ✅ | CWD architecture |
-| Clear agent boundaries | ✅ | Single responsibility per agent |
-| Orchestration graph | ✅ | ProposalSystem + EventBus |
+The Skincare Agent System is a production-grade, autonomous multi-agent framework that generates structured content for skincare products. Unlike traditional rule-based systems, SAS implements **true agent autonomy** where agents independently assess context, propose actions, and coordinate dynamically through a proposal system—demonstrating advanced agentic AI patterns.
+
+### Core Value Proposition
+
+- **Autonomous Decision-Making**: Agents propose actions based on context assessment, not hardcoded workflows
+- **Dynamic Orchestration**: Proposal-based coordination eliminates rigid execution paths
+- **Production-Ready Security**: Multi-layered guardrails, credential isolation, and PII protection
+- **LLM-Powered Reasoning**: Optional Mistral 7B integration for advanced cognitive capabilities
+- **Verifiable Traceability**: Complete audit trails for all agent decisions and actions
 
 ---
 
-## 🏗️ System Architecture
+## Key Features
+
+### 🤖 Agent Autonomy
+- **Proposal System**: Agents independently propose actions with confidence scores
+- **Dynamic Selection**: Orchestrator selects best proposal based on priority and confidence
+- **Self-Reflection**: Agents critique their own outputs and self-correct
+- **Goal-Based Reasoning**: Agents work toward explicit goals, not just tasks
+
+### 🏗️ Architecture
+- **Coordinator-Worker-Delegator (CWD)** pattern for hierarchical task management
+- **Event-Driven Communication**: Agents communicate via event bus, not direct calls
+- **State Management**: Centralized state tracking with checkpoint/rollback support
+- **LangGraph Integration**: Optional graph-based workflow orchestration
+
+### 🔒 Security & Safety
+- **Credential Shim**: Agents never access API keys directly—credentials injected at network layer
+- **Injection Defense**: Multi-pattern prompt injection detection and blocking
+- **PII Redaction**: Automatic filtering of personally identifiable information
+- **Role Compliance**: Agents restricted to authorized tools and actions
+- **Human-in-the-Loop (HITL)**: Optional approval gates for critical operations
+
+### 🧠 Cognitive Capabilities
+- **ReAct Pattern**: Reasoning + Acting for complex problem-solving
+- **Chain of Thought (CoT)**: Step-by-step reasoning with LLM support
+- **Tree of Thoughts (ToT)**: Explore multiple reasoning paths
+- **Hierarchical Task Networks (HTN)**: Decompose complex goals into subtasks
+
+### 📊 Content Generation
+- **FAQ Generation**: Categorized Q&A pairs (15+ questions minimum)
+- **Product Pages**: Structured JSON with benefits, usage, pricing
+- **Comparison Analysis**: Side-by-side product comparisons with recommendations
+- **Template System**: Jinja2-based rendering for consistent output
+
+---
+
+## Tech Stack
+
+| Component | Technology |
+|-----------|-----------|
+| **Language** | Python 3.9+ |
+| **LLM** | Mistral 7B (via API) |
+| **Orchestration** | LangGraph, Custom Proposal System |
+| **Data Validation** | Pydantic 2.0+ |
+| **Templating** | Jinja2 |
+| **Testing** | Pytest (174 tests) |
+| **Code Quality** | Black, isort, flake8, pre-commit |
+| **CI/CD** | GitHub Actions |
+
+---
+
+## System Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                      COORDINATOR                            │
-│   Orchestrator with ProposalSystem (Dynamic Agent Selection)│
-└─────────────────────────────┬───────────────────────────────┘
-                              │
-          ┌───────────────────┼───────────────────┐
-          ▼                   ▼                   ▼
-    ┌───────────┐      ┌───────────┐      ┌───────────┐
-    │ DataAgent │      │ Delegator │      │ Generator │
-    │ + Synth   │      │ (Manager) │      │ + Verifier│
-    └───────────┘      └─────┬─────┘      └───────────┘
-                             │
-               ┌─────────────┼─────────────┐
-               ▼             ▼             ▼
-         ┌──────────┐ ┌───────────┐ ┌────────────┐
-         │ Benefits │ │  Usage    │ │ Questions  │
-         │  Worker  │ │  Worker   │ │   Worker   │
-         └──────────┘ └───────────┘ └────────────┘
+│                      ORCHESTRATOR                            │
+│  (Dynamic Proposal-Based Coordinator)                       │
+└──────────────┬──────────────────────────────────────────────┘
+               │
+               │ Collects Proposals
+               ▼
+    ┌──────────────────────────────────────┐
+    │      PROPOSAL SYSTEM                  │
+    │  • Agents propose actions             │
+    │  • Confidence scoring                 │
+    │  • Priority-based selection           │
+    └──────────────────────────────────────┘
+               │
+               │ Selects Best Proposal
+               ▼
+┌──────────────────────────────────────────────────────────────┐
+│                        AGENTS                                 │
+├───────────────┬──────────────┬──────────────┬────────────────┤
+│  DataAgent    │ Delegator    │ Generation   │ Verifier       │
+│  (Loader)     │ (Manager)    │ (Producer)   │ (Auditor)      │
+└───────────────┴──────────────┴──────────────┴────────────────┘
+                      │
+                      │ Delegates to Workers
+                      ▼
+        ┌─────────────────────────────────────┐
+        │         WORKER AGENTS                │
+        │  • Benefits  • Usage  • Questions    │
+        │  • Comparison  • Validation          │
+        └─────────────────────────────────────┘
 ```
 
-**Pattern:** Coordinator-Worker-Delegator (CWD) Model
+### Data Flow
+
+1. **Data Loading**: `DataAgent` fetches and validates product data
+2. **Synthetic Generation**: `SyntheticDataAgent` creates comparison products
+3. **Analysis**: `DelegatorAgent` coordinates workers for content extraction
+4. **Generation**: `GenerationAgent` renders templates into JSON
+5. **Verification**: `VerifierAgent` performs independent safety/quality audits
 
 ---
 
-## 📁 Project Structure
+## Quick Start
 
-```
-skincare_agent_system/
-├── main.py                 # Entry point
-├── orchestrator.py         # Coordinator with ProposalSystem
-├── delegator.py            # Task distribution manager
-├── workers.py              # Specialized workers (Benefits, Usage, Questions)
-├── agents.py               # BaseAgent with autonomy support
-├── agent_implementations.py # DataAgent, GenerationAgent, etc.
-├── verifier.py             # Independent output verification
-│
-├── templates/              # Template Engine
-│   ├── faq_template.py
-│   ├── product_page_template.py
-│   └── comparison_template.py
-│
-├── logic_blocks/           # Reusable Content Logic
-│   ├── benefits_block.py
-│   ├── usage_block.py
-│   ├── comparison_block.py
-│   └── question_generator.py
-│
-├── proposals.py            # Agent proposals, EventBus, GoalManager
-├── reasoning.py            # CoT, ReAct, HTN decomposition
-├── reflection.py           # Agent self-critique
-├── memory.py               # Working, Episodic, Knowledge Base
-├── guardrails.py           # Input validation, InjectionDefense
-├── action_validator.py     # Action scope validation
-├── failure_detector.py     # Role compliance, handoff audit
-├── hitl.py                 # Human-in-the-Loop authorization
-├── state_manager.py        # Workflow state tracking
-├── evaluation.py           # Failure analysis, metrics
-└── tracer.py               # Logging and tracing
+### Prerequisites
 
-output/
-├── faq.json                # Generated FAQ page
-├── product_page.json       # Generated product description
-└── comparison_page.json    # Generated comparison (GlowBoost vs Product B)
+- Python 3.9 or higher
+- (Optional) Mistral API key for LLM features
 
-tests/                      # 142 tests
-docs/
-└── projectdocumentation.md # System design documentation
-```
-
----
-
-## 🚀 Quick Start
+### Installation
 
 ```bash
-# Clone repository
-git clone https://github.com/Sarvagya1212/kasparro-agentic-sarvagya-jain.git
-cd kasparro-agentic-sarvagya-jain
+# Clone the repository
+git clone https://github.com/yourusername/kasparro-content-generation.git
+cd kasparro-content-generation
 
 # Install dependencies
 pip install -r requirements.txt
 
-# Run the system
-python -m skincare_agent_system.main
+# Copy environment template
+cp .env.example .env
 
-# Run tests
-pytest tests/ -v
+# (Optional) Add your Mistral API key to .env
+# MISTRAL_API_KEY=your_key_here
 ```
 
----
-
-## � Agent Workflow
-
-1. **DataAgent** → Parses product data into `ProductData` model
-2. **SyntheticDataAgent** → Creates fictional Product B for comparison
-3. **DelegatorAgent** → Delegates to specialized workers:
-   - BenefitsWorker → Extracts benefits
-   - UsageWorker → Formats usage instructions
-   - QuestionsWorker → Generates 15+ categorized questions
-4. **ValidationAgent** → Validates analysis results
-5. **GenerationAgent** → Renders templates to JSON
-6. **VerifierAgent** → Verifies output correctness
-
-**Dynamic Selection:** Agents propose actions with confidence scores. Orchestrator selects the best proposal each iteration.
-
----
-
-## 🛡️ Safety & Guardrails
-
-| Layer | Purpose |
-|-------|---------|
-| `InjectionDefense` | Blocks 12+ prompt injection patterns |
-| `Guardrails` | Input validation, PII detection |
-| `ActionValidator` | Per-agent action scope enforcement |
-| `RoleComplianceChecker` | Prevents agents exceeding boundaries |
-| `HITLGate` | Human approval for high-stakes actions |
-| `InterAgentAuditor` | Verifies inter-agent handoffs |
-| `VerifierAgent` | Independent output verification |
-
----
-
-## 🧪 Testing
+### Running the System
 
 ```bash
-pytest tests/ -v                    # All 142 tests
-pytest tests/test_pipeline.py -v    # End-to-end (8 tests)
-pytest tests/test_proposals.py -v   # Autonomy (17 tests)
-pytest tests/test_security.py -v    # Security (23 tests)
-pytest tests/test_templates.py -v   # Templates (12 tests)
-pytest tests/test_logic_blocks.py -v # Content blocks (15 tests)
+# Run the main pipeline
+python -m skincare_agent_system.main
+
+# Run with pytest
+pytest
+
+# Run specific tests
+pytest tests/test_proposals.py -v
+```
+
+### Expected Output
+
+The system generates three JSON files in the `output/` directory:
+
+- `faq.json` - 15+ categorized FAQ questions
+- `product_page.json` - Structured product information
+- `comparison_page.json` - Side-by-side product comparison
+
+---
+
+## Environment Variables
+
+| Variable | Description | Required | Default |
+|----------|-------------|----------|---------|
+| `MISTRAL_API_KEY` | Mistral AI API key | No | None (heuristic mode) |
+| `LLM_MODEL` | Model identifier | No | `open-mistral-7b` |
+
+**Note**: The system gracefully degrades to heuristic logic if no API key is provided.
+
+---
+
+## Project Structure
+
+```
+kasparro-content-generation/
+├── skincare_agent_system/
+│   ├── core/                 # Orchestration & state management
+│   │   ├── orchestrator.py   # Dynamic coordinator
+│   │   ├── proposals.py      # Proposal system
+│   │   ├── models.py         # Pydantic data models
+│   │   ├── state_manager.py  # State tracking
+│   │   └── workflow_graph.py # LangGraph integration
+│   ├── actors/               # Agents & workers
+│   │   ├── agents.py         # BaseAgent class
+│   │   ├── agent_implementations.py
+│   │   ├── delegator.py      # Task manager
+│   │   ├── verifier.py       # Independent auditor
+│   │   └── workers.py        # Specialized workers
+│   ├── security/             # Safety & auth
+│   │   ├── guardrails.py     # Injection defense
+│   │   ├── credential_shim.py # Secure credential injection
+│   │   ├── agent_identity.py  # Agent authentication
+│   │   └── hitl.py           # Human-in-the-loop
+│   ├── cognition/            # Reasoning & memory
+│   │   ├── reasoning.py      # ReAct, CoT, ToT
+│   │   ├── reflection.py     # Self-critique
+│   │   └── memory.py         # Episodic & semantic memory
+│   ├── infrastructure/       # Utilities
+│   │   ├── llm_client.py     # Mistral integration
+│   │   ├── tracer.py         # Execution tracing
+│   │   └── agent_monitor.py  # Anomaly detection
+│   ├── tools/                # Agent tools
+│   ├── templates/            # Jinja2 templates
+│   ├── logic_blocks/         # Reusable content logic
+│   └── main.py               # Entry point
+├── tests/                    # 174 test cases
+├── docs/                     # Documentation
+├── output/                   # Generated content
+└── requirements.txt
 ```
 
 ---
 
-## 📄 Output Examples
+## Development
 
-### FAQ Page (`output/faq.json`)
-```json
-{
-  "page_type": "faq",
-  "product_name": "GlowBoost Vitamin C Serum",
-  "questions": [
-    {
-      "category": "Informational",
-      "question": "What is GlowBoost Vitamin C Serum?",
-      "answer": "A brightening serum with 10% Vitamin C..."
-    }
-  ]
-}
+### Running Tests
+
+```bash
+# Run all tests
+pytest
+
+# Run with coverage
+pytest --cov=skincare_agent_system --cov-report=html
+
+# Run specific test suite
+pytest tests/test_proposals.py -v
 ```
 
-### Comparison Page (`output/comparison_page.json`)
-```json
-{
-  "page_type": "comparison",
-  "product_a": { "name": "GlowBoost Vitamin C Serum", ... },
-  "product_b": { "name": "RadiantGlow Niacinamide Serum", ... },
-  "comparison_points": [ ... ]
-}
+### Code Quality
+
+```bash
+# Format code
+black skincare_agent_system/
+
+# Sort imports
+isort skincare_agent_system/
+
+# Lint
+flake8 skincare_agent_system/
+
+# Pre-commit hooks
+pre-commit install
+pre-commit run --all-files
 ```
+
+### CI/CD
+
+The project uses GitHub Actions for:
+- Automated testing on push/PR
+- Code quality checks (Black, flake8)
+- Coverage reporting
 
 ---
 
-## 📚 Documentation
+## Contributing
 
-- `docs/projectdocumentation.md` — Problem statement, solution overview, system design
-- `IMPLEMENTATION.md` — Architecture diagrams, security layers
-- `project_description.md` — Detailed file-by-file documentation
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+### Coding Standards
+
+- Follow PEP 8 style guide
+- Use type hints for all function signatures
+- Write docstrings for all public methods
+- Maintain test coverage above 80%
+- Update documentation for new features
 
 ---
 
-## 👤 Author
+## License
 
-**Sarvagya Jain**  
-Applied AI Engineer Assignment — Kasparro
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+---
+
+## Acknowledgments
+
+- Built with [LangGraph](https://github.com/langchain-ai/langgraph) for workflow orchestration
+- Powered by [Mistral AI](https://mistral.ai/) for LLM capabilities
+- Inspired by advanced agentic AI research and multi-agent systems design
+
+---
+
+## Support
+
+For issues, questions, or contributions:
+- Open an issue on GitHub
+- Review the [Project Documentation](docs/projectdocumentation.md)
+- Check the [Implementation Guide](IMPLEMENTATION.md)

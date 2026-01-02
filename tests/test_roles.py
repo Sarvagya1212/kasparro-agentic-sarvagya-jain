@@ -1,7 +1,7 @@
 import pytest
 
-from skincare_agent_system.agents import BaseAgent
-from skincare_agent_system.models import (
+from skincare_agent_system.actors.agents import BaseAgent
+from skincare_agent_system.core.models import (
     AgentContext,
     AgentResult,
     AgentStatus,

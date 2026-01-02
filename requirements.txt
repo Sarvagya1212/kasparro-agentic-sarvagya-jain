@@ -1,6 +1,9 @@
 # Core dependencies
 pydantic>=2.0.0
 
+# LLM Integration (Mistral 7B)
+mistralai>=1.0.0
+
 # Testing
 pytest>=7.4.0
 pytest-cov>=4.1.0
@@ -10,3 +13,7 @@ black>=24.1.0
 isort>=5.13.0
 flake8>=7.0.0
 pre-commit>=3.6.0
+
+# Architecture
+langgraph>=0.0.10
+langchain-core>=0.1.0

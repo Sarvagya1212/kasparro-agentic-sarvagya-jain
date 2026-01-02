@@ -13,6 +13,8 @@ from typing import Any, Dict, List, Optional, Set
 
 from pydantic import BaseModel
 
+from skincare_agent_system.infrastructure.tracer import get_tracer
+
 logger = logging.getLogger("Tools")
 
 
@@ -28,6 +30,7 @@ class ToolResult(BaseModel):
 
 class AgentRole(Enum):
     """Agent roles for tool access control."""
+
     COORDINATOR = "coordinator"
     DELEGATOR = "delegator"
     BENEFITS_WORKER = "benefits_worker"
@@ -46,7 +49,12 @@ ROLE_TOOL_ACCESS: Dict[AgentRole, Set[str]] = {
     AgentRole.USAGE_WORKER: {"usage_extractor"},
     AgentRole.FAQ_WORKER: {"faq_generator"},
     AgentRole.COMPARISON_WORKER: {"product_comparison"},
-    AgentRole.DELEGATOR: {"benefits_extractor", "usage_extractor", "faq_generator", "product_comparison"},
+    AgentRole.DELEGATOR: {
+        "benefits_extractor",
+        "usage_extractor",
+        "faq_generator",
+        "product_comparison",
+    },
     AgentRole.GENERATION_AGENT: set(),  # No tools, uses templates
     AgentRole.VERIFIER: set(),  # No tools, verification logic
     AgentRole.DATA_AGENT: set(),  # No tools, data loading
@@ -63,11 +71,20 @@ class BaseTool(ABC):
 
     name: str = "BaseTool"
     description: str = "Base tool interface"
+    input_schema: Optional[Dict[str, Any]] = None  # JSON Schema
 
     @abstractmethod
     def _execute(self, **kwargs) -> Any:
         """Internal execution logic. Override in subclasses."""
         pass
+
+    def to_mcp_schema(self) -> Dict[str, Any]:
+        """Convert tool definition to MCP tool schema."""
+        return {
+            "name": self.name,
+            "description": self.description,
+            "inputSchema": self.input_schema or {"type": "object", "properties": {}},
+        }
 
     def run(self, **kwargs) -> ToolResult:
         """
@@ -75,7 +92,19 @@ class BaseTool(ABC):
         Returns descriptive errors for self-correction.
         """
         try:
+            # Validate against schema if available (basic check)
+            if self.input_schema:
+                # In a full implementation, we'd use jsonschema.validate here
+                # For now, we rely on Pydantic models in subclasses or successful execution
+                pass
+
+            start_time = __import__("time").time()
             result = self._execute(**kwargs)
+            duration_ms = (__import__("time").time() - start_time) * 1000
+
+            get_tracer().log_tool_usage(
+                tool_name=self.name, args=kwargs, result=result, duration_ms=duration_ms
+            )
             return ToolResult(success=True, data=result)
         except ValueError as e:
             # Validation/input errors - recoverable
@@ -84,7 +113,7 @@ class BaseTool(ABC):
                 success=False,
                 error=f"Invalid input: {str(e)}. Check your parameters.",
                 error_type="validation_error",
-                recoverable=True
+                recoverable=True,
             )
         except KeyError as e:
             # Missing data - recoverable with different input
@@ -93,7 +122,7 @@ class BaseTool(ABC):
                 success=False,
                 error=f"Missing required field: {str(e)}. Ensure all required data is provided.",
                 error_type="missing_data",
-                recoverable=True
+                recoverable=True,
             )
         except TypeError as e:
             # Type mismatch - check input format
@@ -102,7 +131,7 @@ class BaseTool(ABC):
                 success=False,
                 error=f"Type mismatch: {str(e)}. Check input data types.",
                 error_type="type_error",
-                recoverable=True
+                recoverable=True,
             )
         except Exception as e:
             # Unexpected error - may not be recoverable
@@ -111,7 +140,7 @@ class BaseTool(ABC):
                 success=False,
                 error=f"Unexpected error in {self.name}: {str(e)}. This may require investigation.",
                 error_type="unexpected_error",
-                recoverable=False
+                recoverable=False,
             )
 
 
@@ -154,18 +183,14 @@ class ToolRegistry:
                 logger.warning(
                     f"Access denied: Role {self._role.value} cannot use tool {name}"
                 )
-                self._access_log.append({
-                    "tool": name,
-                    "role": self._role.value,
-                    "access": "denied"
-                })
+                self._access_log.append(
+                    {"tool": name, "role": self._role.value, "access": "denied"}
+                )
                 return None
 
-            self._access_log.append({
-                "tool": name,
-                "role": self._role.value,
-                "access": "granted"
-            })
+            self._access_log.append(
+                {"tool": name, "role": self._role.value, "access": "granted"}
+            )
 
         return tool
 
@@ -193,8 +218,7 @@ class ToolRegistry:
 
             # Keyword match
             if any(
-                keyword in goal_lower
-                for keyword in tool.description.lower().split()
+                keyword in goal_lower for keyword in tool.description.lower().split()
             ):
                 matches.append(tool)
 
@@ -233,3 +257,44 @@ def create_role_based_toolbox(role: AgentRole) -> ToolRegistry:
     registry.register(FAQGeneratorTool())
     registry.register(ComparisonTool())
     return registry
+
+
+class MCPRegistry(ToolRegistry):
+    """
+    Standardized Model Context Protocol (MCP) Registry.
+    Exposes tools via the standard MCP interface:
+    1. list_tools() -> returns JSON schemas
+    2. call_tool(name, args) -> executes
+    """
+
+    def list_tools(self) -> List[Dict[str, Any]]:
+        """
+        MCP Protocol: tools/list
+        Returns list of tool definitions with schemas.
+        """
+        tools_list = []
+        for name, tool in self._tools.items():
+            # Apply role filtering if set
+            if self._role:
+                allowed = ROLE_TOOL_ACCESS.get(self._role, set())
+                if name not in allowed:
+                    continue
+
+            tools_list.append(tool.to_mcp_schema())
+        return tools_list
+
+    def call_tool(self, name: str, arguments: Dict[str, Any]) -> ToolResult:
+        """
+        MCP Protocol: tools/call
+        Executes a tool by name with arguments.
+        """
+        tool = self.get(name)
+        if not tool:
+            return ToolResult(
+                success=False,
+                error=f"Tool not found or access denied: {name}",
+                error_type="access_denied",
+                recoverable=False,
+            )
+
+        return tool.run(**arguments)

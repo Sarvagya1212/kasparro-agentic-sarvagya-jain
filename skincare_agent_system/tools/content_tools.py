@@ -30,8 +30,22 @@ class BenefitsExtractorTool(BaseTool):
 
     name = "benefits_extractor"
     description = "Extract benefits brightening hydration antioxidant"
+    input_schema = {
+        "type": "object",
+        "properties": {
+            "product_data": {
+                "type": "object",
+                "properties": {
+                    "benefits": {"type": "array", "items": {"type": "string"}},
+                    "key_ingredients": {"type": "object"},
+                },
+                "required": ["benefits"],
+            }
+        },
+        "required": ["product_data"],
+    }
 
-    def _execute(self, product_data: Dict[str, Any]) -> list:
+    def _execute(self, product_data: Dict[str, Any], **kwargs) -> list:
         """Extract benefits from product data."""
         if not product_data:
             raise ValueError("product_data is required")
@@ -51,8 +65,22 @@ class UsageExtractorTool(BaseTool):
 
     name = "usage_extractor"
     description = "Extract usage instructions how to use application"
+    input_schema = {
+        "type": "object",
+        "properties": {
+            "product_data": {
+                "type": "object",
+                "properties": {
+                    "usage_instructions": {"type": "string"},
+                    "how_to_use": {"type": "string"},
+                },
+                "required": [],
+            }
+        },
+        "required": ["product_data"],
+    }
 
-    def _execute(self, product_data: Dict[str, Any]) -> str:
+    def _execute(self, product_data: Dict[str, Any], **kwargs) -> str:
         """Extract usage instructions."""
         if not product_data:
             raise ValueError("product_data is required")
@@ -72,11 +100,27 @@ class FAQGeneratorTool(BaseTool):
 
     name = "faq_generator"
     description = "Generate FAQ questions answers categorized"
+    input_schema = {
+        "type": "object",
+        "properties": {
+            "product_data": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string"},
+                    "description": {"type": "string"},
+                },
+                "required": ["name"],
+            },
+            "min_questions": {"type": "integer", "default": 10},
+        },
+        "required": ["product_data"],
+    }
 
     def _execute(
         self,
         product_data: Dict[str, Any],
-        min_questions: int = 10
+        min_questions: int = 10,
+        agent_identity: str = None,
     ) -> list:
         """Generate FAQ questions."""
         if not product_data:
@@ -84,9 +128,61 @@ class FAQGeneratorTool(BaseTool):
         if min_questions < 1:
             raise ValueError("min_questions must be at least 1")
 
-        return generate_questions_by_category(
-            product_data, min_questions=min_questions
-        )
+        # Try LLM generation first
+        import os
+
+        if os.getenv("MISTRAL_API_KEY"):
+            try:
+                from skincare_agent_system.infrastructure.llm_client import LLMClient
+
+                client = LLMClient()
+
+                prompt = f"""Generate {min_questions} FAQ questions and answers for the following product.
+
+Product: {product_data.get('name')}
+Ingredients: {product_data.get('key_ingredients')}
+Benefits: {product_data.get('benefits')}
+Usage: {product_data.get('how_to_use') or product_data.get('usage_instructions')}
+
+Return a JSON list of questions.
+"""
+                # Pass identity of the worker calling this tool
+                # to satisfy CredentialShim's runtime verification.
+                # Default to "agent_system" if not provided (better than hardcoding specific worker)
+                identity_to_use = agent_identity or "agent_system"
+                response = client.generate_json(prompt, agent_identity=identity_to_use)
+
+                qa_list = []
+                if isinstance(response, list):
+                    qa_list = response
+                elif isinstance(response, dict):
+                    # Handle wrapper keys like "questions", "faqs", "items"
+                    for key in ["questions", "faqs", "items", "data"]:
+                        if key in response and isinstance(response[key], list):
+                            qa_list = response[key]
+                            break
+                    # If still empty, maybe the dict itself is a single item? No, prompt asked for list.
+
+                if qa_list and len(qa_list) > 0:
+                    # Convert dicts to tuples for compatibility
+                    return [
+                        (
+                            q.get("question"),
+                            q.get("answer"),
+                            q.get("category", "General"),
+                        )
+                        for q in qa_list
+                    ]
+
+                print(
+                    f"DEBUG: LLM returned invalid structure: {type(response)} - Falling back"
+                )
+            except Exception as e:
+                # Log but fall through to heuristic
+                print(f"DEBUG: FAQ Generation via LLM failed: {e}")
+
+        # Fallback to heuristic
+        return generate_questions_by_category(product_data, min_questions=min_questions)
 
 
 class ComparisonTool(BaseTool):
@@ -101,11 +197,17 @@ class ComparisonTool(BaseTool):
 
     name = "product_comparison"
     description = "Compare products ingredients price benefits winner"
+    input_schema = {
+        "type": "object",
+        "properties": {
+            "product_a": {"type": "object"},
+            "product_b": {"type": "object"},
+        },
+        "required": ["product_a", "product_b"],
+    }
 
     def _execute(
-        self,
-        product_a: Dict[str, Any],
-        product_b: Dict[str, Any]
+        self, product_a: Dict[str, Any], product_b: Dict[str, Any], **kwargs
     ) -> dict:
         """Compare two products."""
         if not product_a:

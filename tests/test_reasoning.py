@@ -5,8 +5,8 @@ Run with: pytest tests/test_reasoning.py -v
 
 import pytest
 
-from skincare_agent_system.models import AgentContext, ProductData, AnalysisResults
-from skincare_agent_system.reasoning import (
+from skincare_agent_system.cognition.memory import SessionState
+from skincare_agent_system.cognition.reasoning import (
     ChainOfThought,
     ReActReasoner,
     ReasoningChain,
@@ -14,11 +14,8 @@ from skincare_agent_system.reasoning import (
     ThoughtStep,
     ThoughtType,
 )
-from skincare_agent_system.reflection import (
-    ReflectionResult,
-    SelfReflector,
-)
-from skincare_agent_system.memory import SessionState
+from skincare_agent_system.cognition.reflection import ReflectionResult, SelfReflector
+from skincare_agent_system.core.models import AgentContext, AnalysisResults, ProductData
 
 
 class TestThoughtStep:
@@ -27,9 +24,7 @@ class TestThoughtStep:
     def test_thought_creation(self):
         """Should create thought step."""
         step = ThoughtStep(
-            type=ThoughtType.REASONING,
-            content="Testing reasoning",
-            confidence=0.9
+            type=ThoughtType.REASONING, content="Testing reasoning", confidence=0.9
         )
         assert step.type == ThoughtType.REASONING
         assert step.confidence == 0.9
@@ -37,9 +32,7 @@ class TestThoughtStep:
     def test_thought_repr(self):
         """Should have readable repr."""
         step = ThoughtStep(
-            type=ThoughtType.DECISION,
-            content="Decide to proceed",
-            confidence=1.0
+            type=ThoughtType.DECISION, content="Decide to proceed", confidence=1.0
         )
         assert "[DECISION]" in repr(step)
 

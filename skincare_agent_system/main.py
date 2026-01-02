@@ -1,11 +1,31 @@
+import os
 import sys
 from pathlib import Path
 
-from .agent_implementations import DataAgent, GenerationAgent, SyntheticDataAgent
-from .delegator import DelegatorAgent
-from .hitl import get_hitl_gate
-from .orchestrator import Orchestrator
-from .verifier import VerifierAgent
+# Load environment variables from .env file
+from dotenv import load_dotenv
+
+load_dotenv()
+
+import logging
+
+from skincare_agent_system.actors.agent_implementations import (
+    DataAgent,
+    GenerationAgent,
+    SyntheticDataAgent,
+)
+from skincare_agent_system.actors.delegator import DelegatorAgent
+from skincare_agent_system.actors.verifier import VerifierAgent
+from skincare_agent_system.core.orchestrator import Orchestrator
+from skincare_agent_system.security.hitl import get_hitl_gate
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
+
+# Check if LLM is enabled
+LLM_ENABLED = os.getenv("MISTRAL_API_KEY") is not None
 
 
 def main():
@@ -18,8 +38,37 @@ def main():
     print("=" * 70)
     print("Initializing Agents...")
 
+    # Show LLM status
+    if LLM_ENABLED:
+        print("🧠 LLM Mode: ENABLED (Mistral 7B)")
+    else:
+        print("⚡ LLM Mode: DISABLED (using heuristics)")
+
     # Initialize HITL gate (auto_approve=True for non-interactive demo)
     hitl_gate = get_hitl_gate(auto_approve=True)
+
+    # Setup security subsystems
+    from skincare_agent_system.infrastructure.agent_monitor import (
+        AnomalyThresholds,
+        configure_monitor,
+    )
+    from skincare_agent_system.security.credential_shim import (
+        VaultBackend,
+        configure_shim,
+    )
+
+    # Configure shim with identity verification
+    configure_shim(enable_identity_verification=True)
+
+    # Configure monitor with auto-revocation
+    configure_monitor(
+        thresholds=AnomalyThresholds(max_tokens_per_hour=100000),
+        enable_auto_revoke=True,
+    )
+
+    import logging
+
+    logging.getLogger("main").info("Security subsystems initialized (Shim + Monitor)")
 
     # 1. Initialize Coordinator (Orchestrator)
     coordinator = Orchestrator()
@@ -33,17 +82,46 @@ def main():
     # Independent Verifier (separate from ValidationWorker)
     coordinator.register_agent(VerifierAgent("VerifierAgent"))
 
-    print("\nStarting Autonomous Workflow...")
+    print("\nStarting Autonomous Workflow (LangGraph Enabled)...")
     print("-" * 30)
 
-    # 3. Run the System
-    final_context = coordinator.run()
+    # 3. Create and Run Graph
+    try:
+        from skincare_agent_system.core.workflow_graph import create_workflow_graph
+
+        # Map agents for the graph
+        agents_map = {
+            "DataAgent": coordinator.agents["DataAgent"],
+            "SyntheticDataAgent": coordinator.agents["SyntheticDataAgent"],
+            "DelegatorAgent": coordinator.agents["DelegatorAgent"],
+            "GenerationAgent": coordinator.agents["GenerationAgent"],
+            "VerifierAgent": coordinator.agents["VerifierAgent"],
+        }
+
+        app = create_workflow_graph(coordinator, agents_map)
+
+        # Initial state
+        initial_state = {
+            "context": coordinator.context,
+            "next_agent": None,
+            "messages": [],
+            "steps_count": 0,
+            "workflow_status": "active",
+        }
+
+        # Invoke graph
+        final_state = app.invoke(initial_state)
+        final_context = final_state["context"]
+
+    except ImportError:
+        print("⚠️ LangGraph not installed. Falling back to legacy orchestrator.")
+        final_context = coordinator.run()
 
     print("\n" + "=" * 70)
     print("WORKFLOW FINISHED")
     print("=" * 70)
 
-    if coordinator.state.value == "COMPLETED":
+    if coordinator.state.value == "COMPLETED" or final_context.is_valid:
         print("✅ Success! All artifacts generated and verified.")
         print(f"Stats: {len(final_context.execution_history)} steps executed.")
         print("Execution Trace:")

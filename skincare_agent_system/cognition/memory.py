@@ -1,0 +1,464 @@
+"""
+Memory System: Differentiated memory types for coherent long interactions.
+Includes Working Memory, Knowledge Base, Episodic Memory, Context Compression,
+and SessionState for cross-turn persistence.
+"""
+
+import json
+import logging
+from dataclasses import dataclass, field
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+logger = logging.getLogger("Memory")
+
+
+@dataclass
+class SessionState:
+    """
+    Session State: Persists state across conversation turns.
+    Enables long-term user preferences and interaction history.
+    """
+
+    session_id: str = ""
+    user_preferences: Dict[str, Any] = field(default_factory=dict)
+    interaction_history: List[Dict] = field(default_factory=list)
+    learned_patterns: List[str] = field(default_factory=list)
+    context_variables: Dict[str, Any] = field(default_factory=dict)
+    created_at: str = field(default_factory=lambda: datetime.now().isoformat())
+    last_updated: str = field(default_factory=lambda: datetime.now().isoformat())
+
+    def set_preference(self, key: str, value: Any):
+        """Set a user preference."""
+        self.user_preferences[key] = value
+        self._touch()
+
+    def get_preference(self, key: str, default: Any = None) -> Any:
+        """Get a user preference."""
+        return self.user_preferences.get(key, default)
+
+    def add_interaction(self, interaction: Dict):
+        """Add an interaction to history."""
+        interaction["timestamp"] = datetime.now().isoformat()
+        self.interaction_history.append(interaction)
+        self._touch()
+
+    def learn_pattern(self, pattern: str):
+        """Learn a new pattern from interactions."""
+        if pattern not in self.learned_patterns:
+            self.learned_patterns.append(pattern)
+            self._touch()
+
+    def set_variable(self, key: str, value: Any):
+        """Set a context variable."""
+        self.context_variables[key] = value
+        self._touch()
+
+    def get_variable(self, key: str, default: Any = None) -> Any:
+        """Get a context variable."""
+        return self.context_variables.get(key, default)
+
+    def _touch(self):
+        """Update last_updated timestamp."""
+        self.last_updated = datetime.now().isoformat()
+
+    def persist(self, path: str):
+        """Save session to disk."""
+        data = {
+            "session_id": self.session_id,
+            "user_preferences": self.user_preferences,
+            "interaction_history": self.interaction_history,
+            "learned_patterns": self.learned_patterns,
+            "context_variables": self.context_variables,
+            "created_at": self.created_at,
+            "last_updated": self.last_updated,
+        }
+        Path(path).parent.mkdir(parents=True, exist_ok=True)
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2)
+        logger.info(f"Session state persisted to {path}")
+
+    @classmethod
+    def restore(cls, path: str) -> "SessionState":
+        """Restore session from disk."""
+        filepath = Path(path)
+        if not filepath.exists():
+            return cls()
+        try:
+            with open(filepath, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            session = cls(
+                session_id=data.get("session_id", ""),
+                user_preferences=data.get("user_preferences", {}),
+                interaction_history=data.get("interaction_history", []),
+                learned_patterns=data.get("learned_patterns", []),
+                context_variables=data.get("context_variables", {}),
+                created_at=data.get("created_at", datetime.now().isoformat()),
+                last_updated=data.get("last_updated", datetime.now().isoformat()),
+            )
+            logger.info(f"Session state restored from {path}")
+            return session
+        except Exception as e:
+            logger.warning(f"Failed to restore session: {e}")
+            return cls()
+
+
+@dataclass
+class WorkingMemory:
+    """
+    Short-term memory for immediate task context.
+    Auto-clears between workflow runs.
+    """
+
+    current_task: Optional[str] = None
+    active_parameters: Dict[str, Any] = field(default_factory=dict)
+    search_context: Dict[str, Any] = field(default_factory=dict)
+    intermediate_results: List[Any] = field(default_factory=list)
+    _created_at: str = field(default_factory=lambda: datetime.now().isoformat())
+
+    def set_task(self, task: str, parameters: Dict[str, Any] = None):
+        """Set current task with parameters."""
+        self.current_task = task
+        self.active_parameters = parameters or {}
+        logger.info(f"Working memory: Task set to '{task}'")
+
+    def add_result(self, result: Any):
+        """Add intermediate result."""
+        self.intermediate_results.append(result)
+
+    def clear(self):
+        """Clear working memory for new workflow."""
+        self.current_task = None
+        self.active_parameters = {}
+        self.search_context = {}
+        self.intermediate_results = []
+        self._created_at = datetime.now().isoformat()
+        logger.info("Working memory cleared")
+
+
+@dataclass
+class Episode:
+    """A single interaction episode."""
+
+    agent: str
+    action: str
+    outcome: str  # "success" or "failure"
+    context_summary: str
+    timestamp: str
+    metadata: Dict[str, Any] = field(default_factory=dict)
+
+
+class EpisodicMemory:
+    """
+    Records past interaction outcomes for learning.
+    Enables retrieval of similar past episodes.
+    """
+
+    def __init__(self, max_episodes: int = 100):
+        self.episodes: List[Episode] = []
+        self.max_episodes = max_episodes
+
+    def add_episode(
+        self,
+        agent: str,
+        action: str,
+        outcome: str,
+        context_summary: str,
+        metadata: Dict[str, Any] = None,
+    ):
+        """Record a new episode."""
+        episode = Episode(
+            agent=agent,
+            action=action,
+            outcome=outcome,
+            context_summary=context_summary,
+            timestamp=datetime.now().isoformat(),
+            metadata=metadata or {},
+        )
+        self.episodes.append(episode)
+
+        # Trim old episodes if exceeding max
+        if len(self.episodes) > self.max_episodes:
+            self.episodes = self.episodes[-self.max_episodes :]
+
+        logger.info(f"Episode recorded: {agent}/{action} -> {outcome}")
+
+    def get_similar_episodes(
+        self, agent: Optional[str] = None, action: Optional[str] = None, limit: int = 5
+    ) -> List[Episode]:
+        """Retrieve similar past episodes."""
+        filtered = self.episodes
+
+        if agent:
+            filtered = [e for e in filtered if e.agent == agent]
+        if action:
+            filtered = [e for e in filtered if e.action == action]
+
+        return filtered[-limit:]
+
+    def get_success_rate(self, agent: str) -> float:
+        """Get success rate for an agent."""
+        agent_episodes = [e for e in self.episodes if e.agent == agent]
+        if not agent_episodes:
+            return 0.0
+
+        successes = sum(1 for e in agent_episodes if e.outcome == "success")
+        return successes / len(agent_episodes)
+
+    def to_dict(self) -> List[Dict]:
+        """Convert to serializable format."""
+        return [
+            {
+                "agent": e.agent,
+                "action": e.action,
+                "outcome": e.outcome,
+                "context_summary": e.context_summary,
+                "timestamp": e.timestamp,
+                "metadata": e.metadata,
+            }
+            for e in self.episodes
+        ]
+
+    @classmethod
+    def from_dict(cls, data: List[Dict]) -> "EpisodicMemory":
+        """Load from serialized format."""
+        memory = cls()
+        for item in data:
+            memory.episodes.append(Episode(**item))
+        return memory
+
+
+class KnowledgeBase:
+    """
+    Long-term persistent memory for domain rules and user preferences.
+    Loaded from/saved to JSON file.
+    """
+
+    def __init__(self, storage_path: str = "data/knowledge_base.json"):
+        self.storage_path = Path(storage_path)
+        self.domain_rules: Dict[str, Any] = {}
+        self.user_preferences: Dict[str, Any] = {}
+        self.product_catalog: Dict[str, Any] = {}
+        self._load()
+
+    def _load(self):
+        """Load knowledge base from file."""
+        if self.storage_path.exists():
+            try:
+                with open(self.storage_path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    self.domain_rules = data.get("domain_rules", {})
+                    self.user_preferences = data.get("user_preferences", {})
+                    self.product_catalog = data.get("product_catalog", {})
+                logger.info(f"Knowledge base loaded from {self.storage_path}")
+            except Exception as e:
+                logger.warning(f"Failed to load knowledge base: {e}")
+        else:
+            self._initialize_defaults()
+
+    def _initialize_defaults(self):
+        """Initialize with default domain rules."""
+        self.domain_rules = {
+            "min_faq_questions": 15,
+            "required_product_fields": ["name", "brand", "key_ingredients"],
+            "max_retry_attempts": 3,
+            "validation_thresholds": {"min_benefits": 2, "min_question_length": 10},
+        }
+        self.user_preferences = {
+            "output_format": "json",
+            "include_comparison": True,
+            "language": "en",
+        }
+        self.save()
+
+    def save(self):
+        """Persist knowledge base to file."""
+        self.storage_path.parent.mkdir(parents=True, exist_ok=True)
+        data = {
+            "domain_rules": self.domain_rules,
+            "user_preferences": self.user_preferences,
+            "product_catalog": self.product_catalog,
+            "last_updated": datetime.now().isoformat(),
+        }
+        with open(self.storage_path, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2)
+        logger.info(f"Knowledge base saved to {self.storage_path}")
+
+    def get_rule(self, key: str, default: Any = None) -> Any:
+        """Get a domain rule."""
+        return self.domain_rules.get(key, default)
+
+    def set_preference(self, key: str, value: Any):
+        """Set a user preference."""
+        self.user_preferences[key] = value
+        self.save()
+
+
+class ContextCompressor:
+    """
+    Compresses long conversation/decision histories.
+    Retains key information while reducing token count.
+    """
+
+    @staticmethod
+    def compress(
+        history: List[Dict[str, Any]], max_items: int = 10, summary_threshold: int = 20
+    ) -> Dict[str, Any]:
+        """
+        Compress history to manageable size.
+
+        Args:
+            history: List of history items (decisions, steps, etc.)
+            max_items: Maximum items to keep in detail
+            summary_threshold: Threshold to trigger summarization
+
+        Returns:
+            Compressed history with summary
+        """
+        if len(history) <= max_items:
+            return {"type": "full", "items": history, "count": len(history)}
+
+        # Keep recent items in detail
+        recent = history[-max_items:]
+
+        # Summarize older items
+        older = history[:-max_items]
+        summary = ContextCompressor._summarize(older)
+
+        return {
+            "type": "compressed",
+            "summary": summary,
+            "recent_items": recent,
+            "total_count": len(history),
+            "summarized_count": len(older),
+        }
+
+    @staticmethod
+    def _summarize(items: List[Dict[str, Any]]) -> str:
+        """Create a text summary of history items."""
+        if not items:
+            return "No prior history."
+
+        # Extract key information
+        agents_seen = set()
+        decisions = []
+        errors = []
+
+        for item in items:
+            if "agent" in item:
+                agents_seen.add(item["agent"])
+            if "reason" in item:
+                decisions.append(item["reason"][:50])
+            if "error" in str(item).lower():
+                errors.append(str(item)[:50])
+
+        summary_parts = [
+            f"Processed {len(items)} steps.",
+            f"Agents involved: {', '.join(agents_seen)}." if agents_seen else "",
+            f"Key decisions: {len(decisions)}." if decisions else "",
+            f"Errors encountered: {len(errors)}." if errors else "",
+        ]
+
+        return " ".join(p for p in summary_parts if p)
+
+
+@dataclass
+class SemanticDocument:
+    """Document in semantic memory."""
+
+    content: str
+    metadata: Dict[str, Any] = field(default_factory=dict)
+    tags: List[str] = field(default_factory=list)
+    timestamp: str = field(default_factory=lambda: datetime.now().isoformat())
+
+
+class SemanticMemory:
+    """
+    Semantic Memory (RAG-lite).
+    Stores documents and retrieves them based on keyword relevance (TF-IDF simulation).
+    Avoids heavy vector DB dependencies for this implementation.
+    """
+
+    def __init__(self):
+        self.documents: List[SemanticDocument] = []
+
+    def add_document(
+        self, content: str, metadata: Dict[str, Any] = None, tags: List[str] = None
+    ):
+        """Add a document to semantic memory."""
+        doc = SemanticDocument(
+            content=content, metadata=metadata or {}, tags=tags or []
+        )
+        self.documents.append(doc)
+        logger.info(f"Added semantic document (len: {len(content)})")
+
+    def retrieve(self, query: str, limit: int = 3) -> List[SemanticDocument]:
+        """
+        Retrieve relevant documents using basic keyword overlap scoring.
+        Real implementation would use vector embeddings.
+        """
+        if not self.documents:
+            return []
+
+        query_terms = set(query.lower().split())
+        scored_docs = []
+
+        for doc in self.documents:
+            score = 0
+            content_lower = doc.content.lower()
+
+            # Keyword matching
+            for term in query_terms:
+                if term in content_lower:
+                    score += 1
+                if term in doc.tags:
+                    score += 2  # Boost tags
+
+            if score > 0:
+                scored_docs.append((doc, score))
+
+        # Sort by score descending
+        scored_docs.sort(key=lambda x: x[1], reverse=True)
+        return [d for d, s in scored_docs[:limit]]
+
+
+class MemorySystem:
+    """
+    Unified memory system combining all memory types + Semantic.
+    """
+
+    def __init__(self, knowledge_base_path: str = "data/knowledge_base.json"):
+        self.working = WorkingMemory()
+        self.episodic = EpisodicMemory()
+        self.knowledge = KnowledgeBase(knowledge_base_path)
+        self.semantic = SemanticMemory()
+
+    def start_session(self, task: str, parameters: Dict[str, Any] = None):
+        """Start a new working session."""
+        self.working.clear()
+        self.working.set_task(task, parameters)
+
+    def record_outcome(
+        self, agent: str, action: str, success: bool, context_summary: str = ""
+    ):
+        """Record an interaction outcome."""
+        self.episodic.add_episode(
+            agent=agent,
+            action=action,
+            outcome="success" if success else "failure",
+            context_summary=context_summary,
+        )
+
+    def get_context_summary(self, max_items: int = 10) -> Dict[str, Any]:
+        """Get compressed context summary."""
+        episodic_data = self.episodic.to_dict()
+        compressed = ContextCompressor.compress(episodic_data, max_items)
+        return {
+            "working_memory": {
+                "task": self.working.current_task,
+                "parameters": self.working.active_parameters,
+            },
+            "history": compressed,
+            "knowledge_rules": self.knowledge.domain_rules,
+        }

@@ -5,14 +5,14 @@ Run with: pytest tests/test_memory.py
 
 import pytest
 
-from skincare_agent_system.memory import (
+from skincare_agent_system.cognition.memory import (
     ContextCompressor,
     EpisodicMemory,
     KnowledgeBase,
     MemorySystem,
     WorkingMemory,
 )
-from skincare_agent_system.state_manager import (
+from skincare_agent_system.core.state_manager import (
     StateManager,
     StateSpace,
     WorkflowStatus,
@@ -52,12 +52,11 @@ class TestEpisodicMemory:
             agent="TestAgent",
             action="test_action",
             outcome="success",
-            context_summary="Test context"
+            context_summary="Test context",
         )
 
         assert len(em.episodes) == 1
         assert em.episodes[0].agent == "TestAgent"
-
 
     def test_get_similar_episodes(self):
         """Should filter episodes by agent/action."""

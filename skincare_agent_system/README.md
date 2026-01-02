@@ -1,99 +1,45 @@
-# Skincare Multi-Agent Content Generation System
+# Skincare Agent System Package
 
-## Architectural Blueprint: CWD Model
+This package contains the core implementation of the Multi-Agent Content Generation System.
 
-This system implements a **Coordinator-Worker-Delegator (CWD)** architecture with robust safety and verification.
+## Module Overview
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                      COORDINATOR (Orchestrator)                  │
-│                   Role: "Strategic Director"                     │
-│   - Guardrails integration (before_model_callback)              │
-│   - High-level routing decisions                                │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-              ┌───────────────┼───────────────┐
-              ▼               ▼               ▼
-        ┌──────────┐   ┌──────────────┐   ┌──────────┐
-        │DataAgent │   │  DELEGATOR   │   │Generation│
-        │          │   │ (Proj. Mgr)  │   │  Agent   │
-        └──────────┘   └──────────────┘   └──────────┘
-              │               │                 │
-              ▼               ▼                 ▼
-        ┌──────────┐   ┌─────────────┐   ┌──────────┐
-        │Synthetic │   │  WORKERS    │   │ VERIFIER │
-        │DataAgent │   │ +Validation │   │  Agent   │
-        └──────────┘   │  (RETRY ↺)  │   └──────────┘
-                       └─────────────┘
-```
+### Core Agent Logic
+*   **`agents.py`**: Base class definition with `ReAct` reasoning and `SelfReflections` capabilities.
+*   **`orchestrator.py`**: The central nervous system. Uses a `ProposalSystem` to dynamically select agents based on context.
+*   **`delegator.py`**: The Analysis Phase manager. Uses **HTN (Hierarchical Task Network)** planning to decompose goals into worker tasks.
+*   **`workers.py`**: Domain specialists (`Benefits`, `Usage`, `Questions`) that perform actual content extraction.
 
-## Key Architecture Features
+### Intelligence & Autonomy
+*   **`proposals.py`**: Implements the `AgentProposal` protocol and `EventBus` for decentralized coordination.
+*   **`reasoning.py`**: Contains `TaskDecomposer` (HTN), `ReActReasoner`, and `TreeOfThoughts` algorithms.
+*   **`reflection.py`**: Provides self-critique mechanisms for agents to improve their own outputs.
 
-| Feature | Implementation | Location |
-|---------|----------------|----------|
-| **CWD Model** | Coordinator → Delegator → Workers | `orchestrator.py`, `delegator.py`, `workers.py` |
-| **Role Engineering** | `role`, `backstory`, `system_prompt` | `agents.py` |
-| **Instruction Hierarchy** | `validate_instruction()` | `agents.py:20-38` |
-| **Input Guardrails** | `before_model_callback()` | `guardrails.py` |
-| **Tool Guardrails** | `before_tool_callback()` | `guardrails.py` |
-| **HITL Gate** | `HITLGate.request_authorization()` | `hitl.py` |
-| **Independent Verifier** | `VerifierAgent` | `verifier.py` |
-| **Loop-Back** | `ValidationWorker` → RETRY | `delegator.py` |
+### Security & Safety
+*   **`guardrails.py`**: Input validation and PII detection.
+*   **`emergency_controls.py`**: Circuit breakers and panic buttons for system stability.
+*   **`credential_shim.py`**: Securely manages potential API keys (even if mocked/not used).
 
-## Safety Infrastructure
+### Content Generation
+*   **`templates/`**: Jinja2-style templates for `faq`, `product_page`, and `comparison`.
+*   **`logic_blocks/`**: Reusable extraction algorithms (e.g., ingredient cross-referencing).
 
-### Guardrails (`guardrails.py`)
-- **Input validation**: Blocks jailbreaks, PII
-- **Tool validation**: Checks required params, constraints
+## Usage
 
-### HITL (`hitl.py`)
-- **High-stakes actions**: `write_output_file`, `publish_content`
-- **Auto-approve mode**: For testing
-- **Authorization log**: Full audit trail
-
-### VerifierAgent (`verifier.py`)
-- **Independent from ValidationWorker**
-- **Checks**: Content accuracy, harmful patterns, schema compliance
-
-## Agent Personas
-
-| Agent | Role | Backstory |
-|-------|------|-----------|
-| Coordinator | Strategic Director | Ensures system integrity |
-| Delegator | Project Manager | Balances speed with quality |
-| BenefitsWorker | Benefits Specialist | Dermatologist assistant |
-| QuestionsWorker | FAQ Generator | Customer success specialist |
-| ValidationWorker | QA Officer | Strict auditor |
-| VerifierAgent | Independent Auditor | Never trusts, always verifies |
-
-## Folder Structure
-
-```
-skincare_agent_system/
-├── orchestrator.py      # Coordinator
-├── delegator.py         # Delegator with retry loop
-├── workers.py           # Specialized workers
-├── verifier.py          # Independent verifier
-├── guardrails.py        # Safety callbacks
-├── hitl.py              # Human-in-the-Loop
-├── agents.py            # BaseAgent with roles
-├── models.py            # Pydantic models, TaskDirective
-├── agent_implementations.py  # DataAgent, etc.
-├── tools/               # ToolRegistry
-├── logic_blocks/        # FAQ, Benefits logic
-├── templates/           # JSON templates
-├── data/                # Product data
-└── main.py              # Entry point
-```
-
-## Run Commands
+This package is designed to be run as a module:
 
 ```bash
-# Main execution
 python -m skincare_agent_system.main
+```
 
-# Tests
-pytest tests/ -v
-pytest tests/test_safety.py -v
-pytest tests/test_roles.py -v
+Or imported for custom workflows:
+
+```python
+from skincare_agent_system.core.orchestrator import Orchestrator
+from skincare_agent_system.proposals import ProposalSystem
+
+# Custom bootstrapping
+system = ProposalSystem()
+orch = Orchestrator(proposal_system=system)
+orch.run()
 ```
