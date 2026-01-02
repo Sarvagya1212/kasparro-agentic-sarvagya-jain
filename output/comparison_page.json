@@ -29,6 +29,11 @@
       "product_b": "Brightening, Antioxidant protection, Fine line reduction"
     }
   ],
+  "analysis": {
+    "price_difference": "\u20b9200.0",
+    "better_value": "GlowBoost Vitamin C Serum",
+    "ingredient_overlap": "25%"
+  },
   "differences": [],
   "recommendation": "Analyze differences between product attributes",
   "winner_categories": {}

@@ -62,8 +62,10 @@ def generate_faq_json(context: GlobalContext) -> dict:
     
     qa_pairs = []
     for q in context.generated_content.faq_questions:
-        if isinstance(q, tuple) and len(q) >= 2:
-            qa_pairs.append((q[0], q[1]))
+        if isinstance(q, tuple) and len(q) >= 3:
+            qa_pairs.append((q[0], q[1], q[2]))
+        elif isinstance(q, tuple) and len(q) == 2:
+            qa_pairs.append((q[0], q[1], "General"))
     
     data = {
         "product_name": context.product_input.name,
@@ -72,6 +74,7 @@ def generate_faq_json(context: GlobalContext) -> dict:
     }
     
     return template.render(data)
+
 
 
 def generate_product_page_json(context: GlobalContext) -> dict:

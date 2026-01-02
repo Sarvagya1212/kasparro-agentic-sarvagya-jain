@@ -1,0 +1,40 @@
+{
+  "comparison_type": "side_by_side",
+  "primary_product": "{{ primary.name }}",
+  "comparison_with": "{{ other.name }}",
+  "comparison_table": [
+    {
+      "attribute": "Product Name",
+      "product_a": "{{ primary.name }}",
+      "product_b": "{{ other.name }}"
+    },
+    {
+      "attribute": "Price",
+      "product_a": "₹{{ primary.price }}",
+      "product_b": "₹{{ other.price }}"
+    },
+    {
+      "attribute": "Key Ingredients",
+      "product_a": "{{ primary.ingredients|join(', ') }}",
+      "product_b": "{{ other.ingredients|join(', ') }}"
+    },
+    {
+      "attribute": "Skin Types",
+      "product_a": "{{ primary.skin_types|join(', ') }}",
+      "product_b": "{{ other.skin_types|join(', ') }}"
+    },
+    {
+      "attribute": "Benefits",
+      "product_a": "{{ primary.benefits|join(', ') }}",
+      "product_b": "{{ other.benefits|join(', ') }}"
+    }
+  ],
+  "analysis": {
+    "price_difference": "₹{{ price_diff }}",
+    "better_value": "{{ better_value }}",
+    "ingredient_overlap": "{{ ingredient_overlap }}%"
+  },
+  "differences": {{ differences|tojson }},
+  "recommendation": "{{ recommendation }}",
+  "winner_categories": {{ winner_categories|tojson }}
+}

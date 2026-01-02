@@ -1,0 +1,41 @@
+{
+  "product_info": {
+    "name": "{{ product.name }}",
+    "brand": "{{ product.brand }}",
+    "concentration": "{{ product.concentration }}"
+  },
+  "benefits": [
+    {%- for benefit in product.benefits %}
+    "{{ benefit }}"{% if not loop.last %},{% endif %}
+    {%- endfor %}
+  ],
+  "ingredients": {
+    "key_ingredients": [
+      {%- for ingredient in product.key_ingredients %}
+      "{{ ingredient }}"{% if not loop.last %},{% endif %}
+      {%- endfor %}
+    ],
+    "count": {{ product.key_ingredients|length }}
+  },
+  "usage": {
+    "instructions": "{{ usage_instructions }}",
+    "side_effects": "{{ product.side_effects }}"
+  },
+  "suitability": {
+    "skin_types": [
+      {%- for type in product.skin_types %}
+      "{{ type }}"{% if not loop.last %},{% endif %}
+      {%- endfor %}
+    ],
+    "addresses_concerns": [
+      {%- for concern in concerns %}
+      "{{ concern }}"{% if not loop.last %},{% endif %}
+      {%- endfor %}
+    ]
+  },
+  "pricing": {
+    "price": {{ product.price }},
+    "currency": "{{ product.currency }}",
+    "size": "{{ product.size or '' }}"
+  }
+}

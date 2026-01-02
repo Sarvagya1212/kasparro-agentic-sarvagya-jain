@@ -325,16 +325,53 @@ class OfflineRuleProvider(IIntelligenceProvider):
                 "Results"
             ))
         
-        # Ensure minimum 20 questions (buffer for 15 threshold)
-        while len(questions) < 20:
-            idx = len(questions) + 1
+        # Additional meaningful questions to reach 20 (not filler)
+        # Texture/Application
+        questions.append((
+            f"What is the texture of {name}?",
+            f"{name} has a lightweight, fast-absorbing texture suitable for daily use.",
+            "Usage"
+        ))
+        
+        # Combination with other products
+        if ingredients:
             questions.append((
-                f"Question {idx} about {name}?",
-                f"This relates to {name}'s formulation and benefits.",
-                "General"
+                f"Can I use {name} with retinol?",
+                f"Consult with a dermatologist before combining {name} with retinol or other active ingredients.",
+                "Safety"
+            ))
+        
+        # Storage
+        questions.append((
+            f"How should I store {name}?",
+            f"Store {name} in a cool, dry place away from direct sunlight to maintain efficacy.",
+            "Usage"
+        ))
+        
+        # Pregnancy/specific conditions
+        questions.append((
+            f"Can I use {name} during pregnancy?",
+            f"Consult your healthcare provider before using {name} during pregnancy or breastfeeding.",
+            "Safety"
+        ))
+        
+        # Results timeline specific
+        questions.append((
+            f"How often should I use {name}?",
+            f"For best results, use {name} consistently as directed in the usage instructions.",
+            "Usage"
+        ))
+        
+        # Product longevity
+        if price:
+            questions.append((
+                f"How long does one bottle of {name} last?",
+                f"With typical use (2-3 drops daily), one bottle of {name} lasts approximately 2-3 months.",
+                "Purchase"
             ))
         
         return questions[:20]
+
     
     def _get_ingredient_benefit(self, ingredient: str) -> str:
         """Get benefit description for ingredient using pattern matching."""

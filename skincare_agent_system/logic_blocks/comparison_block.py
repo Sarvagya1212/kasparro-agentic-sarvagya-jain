@@ -204,31 +204,49 @@ Provide a 2-3 sentence recommendation.
 
 
 def _generate_recommendation_rules(product_a: Dict, product_b: Dict) -> str:
-    """Dynamic rule-based recommendation using actual product data."""
+    """Dynamic rule-based recommendation using actual product data and metrics."""
     name_a = product_a.get("name", "Product A")
     name_b = product_b.get("name", "Product B")
     price_a = product_a.get("price", 0)
     price_b = product_b.get("price", 0)
-    types_a = product_a.get("skin_types", [])
-    types_b = product_b.get("skin_types", [])
+    types_a = set(product_a.get("skin_types", []))
+    types_b = set(product_b.get("skin_types", []))
+    ingredients_a = set(product_a.get("key_ingredients", []))
+    ingredients_b = set(product_b.get("key_ingredients", []))
+    
+    # Calculate specific metrics
+    price_diff = abs(price_a - price_b)
+    price_savings = round((price_diff / max(price_a, price_b)) * 100) if max(price_a, price_b) > 0 else 0
+    
+    ingredient_overlap = len(ingredients_a & ingredients_b)
+    total_ingredients = len(ingredients_a | ingredients_b)
+    overlap_pct = round(100 * ingredient_overlap / total_ingredients) if total_ingredients > 0 else 0
     
     parts = []
     
-    # Price-based recommendation
+    # Price-based recommendation with specifics
     if price_a and price_b:
         if price_a < price_b:
-            parts.append(f"{name_a} offers better value at ₹{price_a}")
+            parts.append(f"{name_a} offers {price_savings}% better value at ₹{price_a} vs ₹{price_b}")
         else:
-            parts.append(f"{name_b} is more budget-friendly at ₹{price_b}")
+            parts.append(f"{name_b} is {price_savings}% more affordable at ₹{price_b} vs ₹{price_a}")
+    
+    # Ingredient analysis
+    if overlap_pct > 70:
+        parts.append(f"Both products share {overlap_pct}% of active ingredients")
+    elif overlap_pct < 30:
+        parts.append(f"Products have distinct formulations ({overlap_pct}% overlap)")
     
     # Skin type recommendation
     if types_a and types_b:
-        if "Oily" in types_a:
-            parts.append(f"{name_a} is ideal for oily skin")
-        if "Dry" in types_b:
-            parts.append(f"{name_b} suits dry skin better")
+        unique_a = types_a - types_b
+        unique_b = types_b - types_a
+        if unique_a:
+            parts.append(f"{name_a} additionally suits {', '.join(unique_a)}")
+        if unique_b:
+            parts.append(f"{name_b} is better for {', '.join(unique_b)}")
     
     if not parts:
-        parts.append(f"Both {name_a} and {name_b} are effective choices")
+        parts.append(f"Both {name_a} and {name_b} are comparable options")
     
     return ". ".join(parts) + "."
