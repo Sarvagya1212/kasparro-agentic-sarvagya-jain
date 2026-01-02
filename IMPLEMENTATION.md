@@ -1,99 +1,128 @@
 # Implementation Summary
 
-## Production Best Practices Compliance
-
-| Best Practice | Implementation | Location |
-|---------------|----------------|----------|
-| **CWD Architecture** | Coordinator → Delegator → Workers | `orchestrator.py`, `delegator.py`, `workers.py` |
-| **Multi-Agent Collaboration** | ProposalSystem + EventBus | `proposals.py` |
-| **Human-in-the-Loop** | HITLGate with authorization log | `hitl.py` |
-| **Programmatic Hooks** | before_tool_callback, before_model_callback | `guardrails.py` |
-| **Least Privilege** | ActionValidator with per-agent scopes | `action_validator.py` |
-| **Failure Taxonomy** | FailureAnalyzer (5 categories) | `evaluation.py` |
-| **Offline Evaluation** | 142 pytest tests | `tests/*.py` |
-
----
-
-## Architecture Diagram
+## Architecture: Blackboard Pattern
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                    COORDINATOR                          │
-│   • ProposalSystem (agents propose actions)             │
-│   • Dynamic Selection (highest confidence wins)         │
-│   • EventBus (agent-to-agent communication)             │
-└───────────────────────┬─────────────────────────────────┘
-                        │
-        ┌───────────────┼───────────────┐
-        ▼               ▼               ▼
-   ┌─────────┐    ┌───────────┐   ┌───────────┐
-   │  Data   │    │ Delegator │   │Generation │
-   │ Agents  │    │ (Manager) │   │ +Verifier │
-   └─────────┘    └─────┬─────┘   └───────────┘
-                        │
-          ┌─────────────┼─────────────┐
-          ▼             ▼             ▼
-     ┌─────────┐  ┌───────────┐  ┌───────────┐
-     │Benefits │  │ Questions │  │Validation │
-     │ Worker  │  │  Worker   │  │  Worker   │
-     └─────────┘  └───────────┘  └───────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                    GLOBAL CONTEXT                            │
+│  (Blackboard - Single Source of Truth)                      │
+│  product_input → generated_content → errors → stage         │
+└──────────────────────────┬──────────────────────────────────┘
+                           │
+            ┌──────────────▼──────────────┐
+            │      PRIORITY ROUTER         │
+            │   can_handle(state) → bool   │
+            └──────────────┬──────────────┘
+                           │
+    ┌──────────┬───────────┼───────────┬──────────┐
+    ▼          ▼           ▼           ▼          ▼
+  INGEST → SYNTHESIS → DRAFTING → VERIFICATION → COMPLETE
+  (Usage)  (Questions) (Compare)  (Validate)     (Done)
 ```
 
 ---
 
-## Security Layers
+## Core Components
 
+| Component | File | Description |
+|-----------|------|-------------|
+| **GlobalContext** | `core/models.py` | Pydantic shared state with ProcessingStage |
+| **PriorityRouter** | `core/proposals.py` | Simple `can_handle()` boolean routing |
+| **Orchestrator** | `core/orchestrator.py` | Stage-based loop with Reflexion |
+| **EventBus** | `core/event_bus.py` | Observer pattern, non-blocking |
+| **Workers** | `actors/workers.py` | Stage-specific agents |
+| **Providers** | `infrastructure/providers.py` | LLM abstraction + CircuitBreaker |
+
+---
+
+## Key Patterns
+
+### 1. Stage-Based Routing
+
+```python
+class UsageWorker:
+    def can_handle(self, state: GlobalContext) -> bool:
+        return state.stage == ProcessingStage.INGEST
 ```
-User Input
-    ↓
-[InjectionDefense] ← Blocks 12+ attack patterns
-    ↓
-[Guardrails.before_model_callback] ← Blocks PII/keywords
-    ↓
-[ActionValidator] ← Validates action scope + data grounding
-    ↓
-[RoleComplianceChecker] ← Enforces role boundaries
-    ↓
-[HITLGate] ← Human approval for high-stakes actions
-    ↓
-[Guardrails.before_tool_callback] ← Validates tool arguments
-    ↓
-Tool Execution
-    ↓
-[InterAgentAuditor] ← Verifies inter-agent handoffs
-    ↓
-[VerifierAgent] ← Independent output verification
+
+### 2. Reflexion Self-Correction
+
+```python
+if result.status == VALIDATION_FAILED:
+    context.set_reflexion("Need 3 more questions")
+    context.stage = ProcessingStage.SYNTHESIS  # Retry
+```
+
+### 3. CircuitBreaker Pattern
+
+```python
+class CircuitBreaker:
+    failure_threshold = 3  # Opens after 3 failures
+    # Auto-switches MistralProvider → OfflineRuleProvider
+```
+
+### 4. Observer EventBus
+
+```python
+EventBus.emit(Events.AGENT_COMPLETE, {"agent": "QuestionsWorker"})
+# Non-blocking async notification to all subscribers
 ```
 
 ---
 
-## Core Pillars of Autonomy
+## Processing Flow
 
-| Pillar | Implementation |
-|--------|----------------|
-| **Advanced Planning** | CoT, ReAct pattern, HTN decomposition (`reasoning.py`) |
-| **Self-Reflection** | SelfReflector for agent self-critique (`reflection.py`) |
-| **Memory Types** | Working, Episodic, Knowledge Base, SessionState (`memory.py`) |
-| **Tool Use** | Role-based access, MCP-style context (`tools/`) |
+| Step | Stage | Worker | Output |
+|------|-------|--------|--------|
+| 1 | INGEST | UsageWorker | Extract usage instructions |
+| 2 | SYNTHESIS | QuestionsWorker | Generate 20 FAQ questions |
+| 3 | DRAFTING | ComparisonWorker | Compare products |
+| 4 | VERIFICATION | ValidationWorker | Validate ≥15 FAQs |
+| 5 | COMPLETE | - | Generate output JSON |
 
 ---
 
-## Critical Risk Mitigations
+## Provider Abstraction
 
-| Risk | Mitigation |
-|------|------------|
-| **Hallucination** | ActionValidator verifies data grounding |
-| **Prompt Injection** | InjectionDefense detects 12+ patterns |
-| **Role Violations** | RoleComplianceChecker enforces boundaries |
-| **Inter-Agent Drift** | InterAgentAuditor audits handoffs |
-| **Unsafe Actions** | HITLGate requires human approval |
+```
+IIntelligenceProvider (ABC)
+    ├── MistralProvider     # API + retries + backoff
+    └── OfflineRuleProvider # Dynamic regex/template (no static mocks)
+            │
+            └── CircuitBreakerWrapper (auto-switch on failure)
+```
+
+---
+
+## Configuration
+
+| Source | Path | Purpose |
+|--------|------|---------|
+| Product Data | `config/run_config.json` | External injection |
+| Environment | `MISTRAL_API_KEY` | LLM provider selection |
+| Environment | `RUN_CONFIG` | Custom config path |
 
 ---
 
 ## Run Commands
+
 ```bash
-python -m skincare_agent_system.main
-pytest tests/ -v
+# Run system
+python run_agent.py
+
+# Test
+pytest
+
+# With different config
+RUN_CONFIG=custom.json python run_agent.py
 ```
 
-## Test Coverage: 142 tests
+---
+
+## Output Files
+
+| File | Content |
+|------|---------|
+| `output/faq.json` | 20 categorized Q&A pairs |
+| `output/product_page.json` | Product details |
+| `output/comparison_page.json` | Product comparison |
