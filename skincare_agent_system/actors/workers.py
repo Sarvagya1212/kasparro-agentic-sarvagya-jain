@@ -28,6 +28,8 @@ logger = logging.getLogger("Workers")
 class UsageWorker:
     """Extract usage instructions - activates at INGEST stage."""
     
+    dependencies = ["product_input"]  # What this worker needs
+    
     def __init__(self, name: str = "UsageWorker"):
         self.name = name
 
@@ -68,6 +70,8 @@ class QuestionsWorker:
     """Generate FAQ questions - activates at SYNTHESIS stage."""
     FAQ_BUFFER = 20  # Request more than needed
     MIN_REQUIRED = 15
+    
+    dependencies = ["product_input"]  # What this worker needs
 
     def __init__(self, name: str = "QuestionsWorker"):
         self.name = name
@@ -112,6 +116,8 @@ class QuestionsWorker:
 
 class ComparisonWorker:
     """Create product comparison - activates at DRAFTING stage."""
+    
+    dependencies = ["product_input", "comparison_input"]  # What this worker needs
     
     def __init__(self, name: str = "ComparisonWorker"):
         self.name = name
@@ -170,6 +176,8 @@ class ComparisonWorker:
 class ValidationWorker:
     """Validate results - activates at VERIFICATION stage."""
     MIN_FAQ_THRESHOLD = 15  # Critical requirement
+    
+    dependencies = ["product_input", "generated_content"]  # What this worker needs
 
     def __init__(self, name: str = "ValidationWorker"):
         self.name = name
@@ -203,6 +211,19 @@ class ValidationWorker:
                 context=context,
                 message=f"Rejection: Need {self.MIN_FAQ_THRESHOLD} FAQs, got {faq_count}"
             )
+        
+        # Safety guardrails - check for unsafe claims
+        safety_passed, safety_error = self._check_safety_policy(context.generated_content.faq_questions)
+        if not safety_passed:
+            errors.append(f"Safety violation: {safety_error}")
+            context.errors = errors
+            logger.warning(f"Safety check failed: {safety_error}")
+            return AgentResult(
+                agent_name=self.name,
+                status=AgentStatus.VALIDATION_FAILED,
+                context=context,
+                message=f"Safety violation detected: {safety_error}"
+            )
 
         # All checks passed
         context.errors = []
@@ -215,3 +236,31 @@ class ValidationWorker:
             context=context,
             message=f"Validation passed ({faq_count} FAQs)"
         )
+    
+    def _check_safety_policy(self, faq_questions) -> tuple[bool, str]:
+        """
+        Check FAQ content for unsafe or hallucinated claims.
+        Returns (is_safe, error_message)
+        """
+        import re
+        
+        # Unsafe claim patterns (common LLM hallucinations)
+        UNSAFE_PATTERNS = [
+            (r"\bcure\b", "Claims to cure"),
+            (r"\beliminate\b.*\bdisease\b", "Claims to eliminate disease"),
+            (r"\bguaranteed\b.*\bresults\b", "Guarantees results"),
+            (r"\b100%\b.*\beffective\b", "Claims 100% effectiveness"),
+            (r"\bpermanently\b.*\bremove\b", "Claims permanent removal"),
+            (r"\bapproved\b.*\bFDA\b", "Fake FDA approval"),
+        ]
+        
+        # Check all questions and answers
+        for question, answer, category in faq_questions:
+            combined_text = f"{question} {answer}"
+            
+            for pattern, claim_type in UNSAFE_PATTERNS:
+                if re.search(pattern, combined_text, re.IGNORECASE):
+                    return False, f"{claim_type} detected in: '{answer[:50]}...'"
+        
+        return True, None
+
