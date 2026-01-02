@@ -28,7 +28,7 @@ class ReasoningResult:
 class ReasoningEngine:
     """
     Provides LLM-based reasoning capabilities to agents.
-    Uses your existing provider system with fallback to heuristics.
+    Uses your existing provider system. Fails safe if unavailable.
     """
 
     def __init__(self, provider=None):
@@ -191,7 +191,7 @@ Respond ONLY with valid JSON (no markdown):
     def _fallback_reasoning(
         self, agent_name: str, context: Dict, task: str
     ) -> ReasoningResult:
-        """Heuristic fallback when LLM unavailable"""
+        """Return safe failure state when LLM unavailable"""
 
         # Check basic prerequisites
         has_product_data = context.get("product_data_available", False)
