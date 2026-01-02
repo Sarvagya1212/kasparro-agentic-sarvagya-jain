@@ -50,7 +50,7 @@ def test_usage_worker(context):
     assert context.generated_content.usage != ""
     assert "Apply" in context.generated_content.usage
 
-@patch("skincare_agent_system.logic_blocks.question_generator.get_provider")
+@patch("skincare_agent_system.infrastructure.providers.get_provider")
 def test_questions_worker(mock_get_provider, context):
     # Setup mock provider
     mock_provider = MagicMock()
@@ -83,10 +83,7 @@ def test_comparison_worker(context):
     
     assert worker.can_handle(context) is True
     
-    # Patch the provider factory globally in infrastructure 
-    # This works because get_provider calls return a new instance, 
-    # but we are patching the get_provider function itself.
-    
+    # Patching the provider factory
     with patch("skincare_agent_system.infrastructure.providers.get_provider") as mock_prov_getter:
         mock_prov_getter.return_value.generate.side_effect = Exception("LLM Down")
         
@@ -94,4 +91,7 @@ def test_comparison_worker(context):
         
         assert result.status == AgentStatus.COMPLETE
         assert context.generated_content.comparison is not None
-        assert "price_difference" in context.generated_content.comparison.get("analysis", {})
+        # Analysis keys (price_difference) are added by template, not worker
+        # Worker adds keys: ingredients, price, benefits, winner, recommendation
+        assert "price" in context.generated_content.comparison
+        assert "ingredients" in context.generated_content.comparison
