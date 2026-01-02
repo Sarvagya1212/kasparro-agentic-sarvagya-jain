@@ -236,7 +236,8 @@ def _generate_recommendation_rules(product_a: Dict, product_b: Dict) -> str:
     if price_a and price_b:
         if price_a < price_b:
             parts.append(
-                f"{name_a} offers {price_savings}% better value at ₹{price_a} vs ₹{price_b}"
+                f"{name_a} offers {price_savings}% better value "
+                f"at ₹{price_a} vs ₹{price_b}"
             )
         else:
             parts.append(

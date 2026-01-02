@@ -218,7 +218,10 @@ class ValidationWorker:
                 agent_name=self.name,
                 status=AgentStatus.VALIDATION_FAILED,
                 context=context,
-                message=f"Rejection: Need {self.MIN_FAQ_THRESHOLD} FAQs, got {faq_count}",
+                message=(
+                    f"Rejection: Need {self.MIN_FAQ_THRESHOLD} FAQs, "
+                    f"got {faq_count}"
+                ),
             )
 
         # Safety guardrails - check for unsafe claims

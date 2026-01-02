@@ -24,7 +24,8 @@ class FAQTemplate(ContentTemplate):
         Expected data format:
         {
             "product_name": str,
-            "qa_pairs": List[tuple[str, str, str]],  # [(question, answer, category), ...]
+            "qa_pairs": List[tuple[str, str, str]],
+            # [(question, answer, category), ...]
         }
 
         Returns:

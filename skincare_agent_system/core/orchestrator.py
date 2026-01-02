@@ -140,7 +140,11 @@ class Orchestrator:
         current_count = len(context.generated_content.faq_questions)
         needed = 15 - current_count
 
-        return f"You previously generated {current_count} questions. The requirement is 15. Please generate {needed} more to meet the threshold."
+        return (
+            f"You previously generated {current_count} questions. "
+            f"The requirement is 15. Please generate {needed} more "
+            f"to meet the threshold."
+        )
 
     def _advance_stage_if_stuck(self, context: GlobalContext):
         """Advance stage if no worker handles it."""
