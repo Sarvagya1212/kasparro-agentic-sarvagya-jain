@@ -438,9 +438,7 @@ class OfflineRuleProvider(IIntelligenceProvider):
                 "Hyaluronic Acid provides deep hydration " "and plumps the skin."
             ),
             "retinol": "Retinol promotes cell turnover and reduces fine lines.",
-            "niacinamide": (
-                "Niacinamide minimizes pores and controls oil production."
-            ),
+            "niacinamide": ("Niacinamide minimizes pores and controls oil production."),
             "salicylic": "Salicylic Acid unclogs pores and treats acne.",
             "glycolic": "Glycolic Acid exfoliates for smoother, brighter skin.",
             "ferulic": "Ferulic Acid enhances antioxidant stability and protection.",
