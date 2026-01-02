@@ -58,6 +58,7 @@ class ProductData(BaseModel):
     """Strict schema for product data with validation."""
 
     name: str = Field(..., min_length=1, description="Product name")
+    category: str = Field(default="General", description="Product category (e.g. Serum, Moisturizer)")
     brand: str = Field(..., min_length=1, description="Brand name")
     concentration: Optional[str] = None
     key_ingredients: List[str] = Field(default_factory=list)
