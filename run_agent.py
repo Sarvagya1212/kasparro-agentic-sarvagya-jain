@@ -1,6 +1,6 @@
 """
 Main entry point for Skincare Agent System.
-Generates the 3 required output files: faq.json, product_page.json, comparison_page.json
+Loads product data from config, runs agents, generates JSON outputs.
 """
 
 import json
@@ -11,9 +11,14 @@ from datetime import datetime
 # Add project root to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from skincare_agent_system.core.models import (
+    GlobalContext,
+    ProductData,
+    ContentSchema,
+    ProcessingStage,
+)
 from skincare_agent_system.core.orchestrator import Orchestrator
 from skincare_agent_system.actors.workers import (
-    BenefitsWorker,
     UsageWorker,
     QuestionsWorker,
     ComparisonWorker,
@@ -24,52 +29,44 @@ from skincare_agent_system.templates.product_page_template import ProductPageTem
 from skincare_agent_system.templates.comparison_template import ComparisonTemplate
 
 
-def load_product_data():
-    """Load the primary product data (GlowBoost) as specified in assignment"""
-    return {
-        "name": "GlowBoost Vitamin C Serum",
-        "brand": "GlowBoost",
-        "concentration": "10% Vitamin C",
-        "key_ingredients": ["Vitamin C", "Hyaluronic Acid"],
-        "benefits": ["Brightening", "Fades dark spots"],
-        "price": 699.0,
-        "currency": "INR",
-        "skin_types": ["Oily", "Combination"],
-        "side_effects": "Mild tingling for sensitive skin",
-        "usage_instructions": "Apply 2-3 drops in the morning before sunscreen"
-    }
+def load_config() -> GlobalContext:
+    """
+    Load product data from external config file.
+    Config path can be overridden via RUN_CONFIG env variable.
+    """
+    config_path = os.getenv("RUN_CONFIG", "config/run_config.json")
+    
+    if not os.path.exists(config_path):
+        raise FileNotFoundError(
+            f"Config file not found: {config_path}. "
+            f"Create config/run_config.json or set RUN_CONFIG env variable."
+        )
+    
+    with open(config_path, "r") as f:
+        data = json.load(f)
+    
+    # Validate and load product data
+    product = ProductData(**data["product"])
+    comparison = ProductData(**data["comparison_product"]) if "comparison_product" in data else None
+    
+    return GlobalContext(
+        product_input=product,
+        comparison_input=comparison,
+        stage=ProcessingStage.INGEST
+    )
 
 
-def load_comparison_product():
-    """Load fictional Product B for comparison"""
-    return {
-        "name": "RadiantGlow Vitamin C Cream",
-        "brand": "RadiantGlow",
-        "concentration": "15% Vitamin C",
-        "key_ingredients": ["Vitamin C", "Ferulic Acid", "Vitamin E"],
-        "benefits": ["Brightening", "Antioxidant protection", "Fine line reduction"],
-        "price": 899.0,
-        "currency": "INR",
-        "skin_types": ["Normal", "Dry", "Combination"],
-        "side_effects": "May cause dryness initially",
-        "usage_instructions": "Apply morning and evening to clean skin"
-    }
-
-
-def generate_faq_json(context, product_name):
-    """Generate FAQ JSON using the FAQ template"""
+def generate_faq_json(context: GlobalContext) -> dict:
+    """Generate FAQ JSON using the FAQ template."""
     template = FAQTemplate()
     
-    # Convert questions from tuples to qa_pairs format
     qa_pairs = []
-    for q in context.generated_questions:
+    for q in context.generated_content.faq_questions:
         if isinstance(q, tuple) and len(q) >= 2:
             qa_pairs.append((q[0], q[1]))
-        elif isinstance(q, dict):
-            qa_pairs.append((q.get("question", ""), q.get("answer", "")))
     
     data = {
-        "product_name": product_name,
+        "product_name": context.product_input.name,
         "qa_pairs": qa_pairs,
         "timestamp": datetime.now().isoformat()
     }
@@ -77,79 +74,55 @@ def generate_faq_json(context, product_name):
     return template.render(data)
 
 
-def generate_product_page_json(product_data, context):
-    """Generate Product Page JSON using the ProductPage template"""
+def generate_product_page_json(context: GlobalContext) -> dict:
+    """Generate Product Page JSON using the ProductPage template."""
     template = ProductPageTemplate()
     
-    # Use extracted benefits if available, else use original
-    benefits = (
-        context.analysis_results.benefits 
-        if context.analysis_results and context.analysis_results.benefits 
-        else product_data.get("benefits", [])
-    )
-    
-    # Use extracted usage if available, else use original
-    usage = (
-        context.analysis_results.usage 
-        if context.analysis_results and context.analysis_results.usage 
-        else product_data.get("usage_instructions", "")
-    )
+    product = context.product_input
     
     data = {
-        "name": product_data["name"],
-        "brand": product_data.get("brand", ""),
-        "concentration": product_data.get("concentration", ""),
-        "benefits": benefits,
-        "ingredients": product_data.get("key_ingredients", []),
-        "usage_instructions": usage,
-        "price": product_data.get("price", 0),
-        "currency": product_data.get("currency", "INR"),
-        "skin_types": product_data.get("skin_types", []),
+        "name": product.name,
+        "brand": product.brand,
+        "concentration": product.concentration or "",
+        "benefits": product.benefits,
+        "ingredients": product.key_ingredients,
+        "usage_instructions": context.generated_content.usage or product.usage_instructions,
+        "price": product.price or 0,
+        "currency": product.currency,
+        "skin_types": product.skin_types,
         "concerns": ["Dull skin", "Dark spots", "Uneven tone"],
-        "side_effects": product_data.get("side_effects", "")
+        "side_effects": product.side_effects or ""
     }
     
     return template.render(data)
 
 
-def generate_comparison_json(product_a, product_b, context):
-    """Generate Comparison Page JSON using the Comparison template"""
+def generate_comparison_json(context: GlobalContext) -> dict:
+    """Generate Comparison Page JSON using the Comparison template."""
     template = ComparisonTemplate()
     
-    # Get comparison results from context
-    comparison_data = {}
-    if context.analysis_results and context.analysis_results.comparison:
-        comparison_data = context.analysis_results.comparison
+    product_a = context.product_input
+    product_b = context.comparison_input
+    comparison_data = context.generated_content.comparison or {}
     
     data = {
         "primary": {
-            "name": product_a["name"],
-            "price": product_a.get("price", 0),
-            "ingredients": product_a.get("key_ingredients", []),
-            "skin_types": product_a.get("skin_types", []),
-            "benefits": product_a.get("benefits", [])
+            "name": product_a.name,
+            "price": product_a.price or 0,
+            "ingredients": product_a.key_ingredients,
+            "skin_types": product_a.skin_types,
+            "benefits": product_a.benefits
         },
         "other": {
-            "name": product_b["name"],
-            "price": product_b.get("price", 0),
-            "ingredients": product_b.get("key_ingredients", []),
-            "skin_types": product_b.get("skin_types", []),
-            "benefits": product_b.get("benefits", [])
+            "name": product_b.name if product_b else "N/A",
+            "price": product_b.price if product_b else 0,
+            "ingredients": product_b.key_ingredients if product_b else [],
+            "skin_types": product_b.skin_types if product_b else [],
+            "benefits": product_b.benefits if product_b else []
         },
-        "differences": comparison_data.get("differences", [
-            {"aspect": "Price", "winner": "GlowBoost", "reason": "₹200 cheaper"},
-            {"aspect": "Ingredients", "winner": "RadiantGlow", "reason": "More antioxidants"},
-            {"aspect": "Skin types", "winner": "RadiantGlow", "reason": "Wider compatibility"}
-        ]),
-        "recommendation": comparison_data.get("recommendation", 
-            "GlowBoost is ideal for budget-conscious users with oily skin. "
-            "RadiantGlow offers more comprehensive antioxidant protection."
-        ),
-        "winner_categories": comparison_data.get("winners", {
-            "price": "GlowBoost",
-            "ingredients": "RadiantGlow",
-            "overall": "Tie - depends on skin type and budget"
-        })
+        "differences": comparison_data.get("differences", []),
+        "recommendation": comparison_data.get("recommendation", "No recommendation generated."),
+        "winner_categories": comparison_data.get("winners", {})
     }
     
     return template.render(data)
@@ -157,22 +130,25 @@ def generate_comparison_json(product_a, product_b, context):
 
 def main():
     print("=" * 60)
-    print("🧴 Skincare Agent System - Multi-Agent Content Generation")
+    print("🧴 Skincare Agent System")
     print("=" * 60)
     
-    # Load product data
-    product_data = load_product_data()
-    comparison_product = load_comparison_product()
-    
-    print(f"\n📦 Primary Product: {product_data['name']}")
-    print(f"📦 Comparison Product: {comparison_product['name']}")
+    # Load from external config
+    print("\n📂 Loading config...")
+    try:
+        context = load_config()
+        print(f"   ✓ Product: {context.product_input.name}")
+        if context.comparison_input:
+            print(f"   ✓ Comparison: {context.comparison_input.name}")
+    except Exception as e:
+        print(f"   ✗ Failed to load config: {e}")
+        return 1
     
     # Create orchestrator
-    orchestrator = Orchestrator()
+    orchestrator = Orchestrator(max_steps=15)
     
     # Register workers
     workers = [
-        BenefitsWorker("BenefitsWorker"),
         UsageWorker("UsageWorker"),
         QuestionsWorker("QuestionsWorker"),
         ComparisonWorker("ComparisonWorker"),
@@ -184,57 +160,49 @@ def main():
         orchestrator.register_agent(worker)
         print(f"   ✓ {worker.name}")
     
-    # Set comparison data on context
-    from skincare_agent_system.core.models import ProductData
-    orchestrator.context.comparison_data = ProductData(**comparison_product)
-    
     # Run workflow
-    print("\n🚀 Starting agent workflow...")
+    print("\n🚀 Starting workflow...")
     print("-" * 60)
     
     try:
-        context = orchestrator.run(initial_product_data=product_data)
+        final_context = orchestrator.run(context)
         
         print("-" * 60)
         
-        # Show results
-        if context.is_valid:
+        # Display results
+        if final_context.is_valid:
             print("\n✅ Workflow completed successfully!")
         else:
             print("\n⚠️  Workflow completed with validation errors:")
-            for error in context.validation_errors:
+            for error in final_context.errors:
                 print(f"   - {error}")
         
-        print(f"\n📊 Agent Results:")
-        if context.analysis_results:
-            print(f"   Benefits extracted: {len(context.analysis_results.benefits)}")
-            print(f"   Usage instructions: {'✓' if context.analysis_results.usage else '✗'}")
-        print(f"   Questions generated: {len(context.generated_questions)}")
-        print(f"   Execution steps: {len(context.execution_history)}")
+        print(f"\n📊 Results:")
+        print(f"   Stage: {final_context.stage.value}")
+        print(f"   Usage: {'✓' if final_context.generated_content.usage else '✗'}")
+        print(f"   FAQs: {len(final_context.generated_content.faq_questions)}")
+        print(f"   Steps: {len(final_context.execution_history)}")
         
         # Generate output files
         os.makedirs("output", exist_ok=True)
         
-        # 1. Generate FAQ JSON
-        faq_json = generate_faq_json(context, product_data["name"])
+        faq_json = generate_faq_json(final_context)
         with open("output/faq.json", "w") as f:
             json.dump(faq_json, f, indent=2)
-        print(f"\n💾 Generated: output/faq.json ({faq_json['total_questions']} Q&As)")
+        print(f"\n💾 output/faq.json ({faq_json.get('total_questions', 0)} Q&As)")
         
-        # 2. Generate Product Page JSON
-        product_json = generate_product_page_json(product_data, context)
+        product_json = generate_product_page_json(final_context)
         with open("output/product_page.json", "w") as f:
             json.dump(product_json, f, indent=2)
-        print(f"💾 Generated: output/product_page.json")
+        print("💾 output/product_page.json")
         
-        # 3. Generate Comparison Page JSON
-        comparison_json = generate_comparison_json(product_data, comparison_product, context)
+        comparison_json = generate_comparison_json(final_context)
         with open("output/comparison_page.json", "w") as f:
             json.dump(comparison_json, f, indent=2)
-        print(f"💾 Generated: output/comparison_page.json")
+        print("💾 output/comparison_page.json")
         
         print("\n" + "=" * 60)
-        print("✅ All 3 required output files generated successfully!")
+        print("✅ All outputs generated!")
         print("=" * 60)
         
     except Exception as e:

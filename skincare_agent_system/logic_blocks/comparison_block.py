@@ -178,25 +178,28 @@ def generate_recommendation(
 ) -> str:
     """
     Generate overall recommendation using LLM.
-
     Args:
         product_a: First product data
         product_b: Second product data
-
     Returns:
         Recommendation text
     """
     llm = get_llm_client()
-    
-    if llm:
+    if not llm:
+        raise ConnectionError("LLM client is not available.")
+
+    for attempt in range(3):
         try:
-            return _generate_recommendation_llm(llm, product_a, product_b)
+            recommendation = _generate_recommendation_llm(llm, product_a, product_b)
+            if recommendation:
+                return recommendation
         except Exception as e:
             import logging
-            logging.getLogger("ComparisonBlock").warning(f"LLM recommendation failed: {e}")
+            logging.getLogger("ComparisonBlock").warning(f"LLM recommendation attempt {attempt + 1} failed: {e}")
+            if attempt == 2:
+                raise RuntimeError("Failed to generate recommendation using LLM after multiple retries.") from e
     
-    # Fallback
-    return _generate_recommendation_heuristic(product_a, product_b)
+    raise ValueError("LLM returned an empty recommendation after multiple retries.")
 
 
 def _generate_recommendation_llm(llm, product_a: Dict, product_b: Dict) -> str:
@@ -225,24 +228,4 @@ Return ONLY the recommendation text, no quotes.
         return response.strip().strip('"')
     
     raise ValueError("LLM returned empty response")
-
-
-def _generate_recommendation_heuristic(product_a: Dict, product_b: Dict) -> str:
-    """Fallback heuristic recommendation."""
-    name_a = product_a.get("name", "Product A")
-    name_b = product_b.get("name", "Product B")
-
-    price_comp = compare_prices(product_a, product_b)
-
-    if price_comp["cheaper_product"] == name_a:
-        return (
-            f"For budget-conscious buyers, {name_a} offers excellent "
-            f"value. However, {name_b} may provide additional benefits "
-            f"worth the premium."
-        )
-    else:
-        return (
-            f"{name_a} is the premium option with comprehensive benefits, "
-            f"while {name_b} offers great value for those on a budget."
-        )
 

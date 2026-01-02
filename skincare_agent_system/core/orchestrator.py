@@ -1,343 +1,112 @@
 """
-Orchestrator: Dynamic Agent Coordinator using Proposal System.
-Simplified for Phase 1.
+Orchestrator: Simplified Agent Coordinator using Blackboard pattern.
+Broadcast → Bid → Select → Execute loop.
 """
 
 import logging
 from typing import Dict, List, Optional
 
-from skincare_agent_system.actors.base_agent import BaseAgent
 from skincare_agent_system.core.models import (
-    AgentContext,
+    GlobalContext,
     AgentStatus,
-    SystemState,
+    ProcessingStage,
     TaskDirective,
-    TaskPriority,
 )
-from skincare_agent_system.core.proposals import (
-    Event,
-    EventBus,
-    EventType,
-    Goal,
-    GoalManager,
-    ProposalSystem,
-)
-from skincare_agent_system.core.state_manager import StateManager
-from skincare_agent_system.core.event_system import (
-    ReactiveEventBus,
-    get_event_bus,
-    publish_event,
-    EventType as ReactiveEventType,
-)
-from skincare_agent_system.infrastructure.logger import get_logger
-from skincare_agent_system.infrastructure.logger import get_logger
+from skincare_agent_system.core.proposals import SimpleProposalSystem, AgentProposal
 
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
-logger = logging.getLogger("Coordinator")
-system_log = get_logger("Orchestrator")
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+logger = logging.getLogger("Orchestrator")
 
 
-# Stub classes for missing dependencies
-class MockMemory:
-    def start_session(self, *args, **kwargs):
-        pass
-
-    def record_outcome(self, *args, **kwargs):
-        pass
-
-
-class MockTracer:
-    def start_trace(self, *args, **kwargs):
-        return "trace_id"
-
-    def end_trace(self, *args, **kwargs):
-        pass
-
-    def export_trace(self, *args, **kwargs):
-        pass
-
-
-class Orchestrator(BaseAgent):
-    """
-    Dynamic Coordinator using Agent Proposals.
-    """
-
+class SimpleMemory:
+    """Simple execution history log."""
     def __init__(self):
-        super().__init__(
-            name="Coordinator",
-            role="Strategic Director",
-            backstory="Strategic Director who orchestrates autonomous agents.",
-        )
-        self.agents: Dict[str, BaseAgent] = {}
-        self.context = AgentContext()
-        self.state = SystemState.IDLE
-        self.max_steps = 20
-        self._last_status: AgentStatus = None
-        self._generation_complete: bool = False
+        self.execution_history: List[str] = []
 
-        self.state_manager = StateManager()
-        self.memory = MockMemory()  # Stub
-        self.proposal_system = ProposalSystem()
-        self.event_bus = EventBus()
-        self.reactive_bus = get_event_bus()  # Reactive event bus
-        self.goal_manager = GoalManager()
+    def log(self, action: str):
+        self.execution_history.append(action)
+        logger.info(f"Memory: {action}")
 
-        self._active_coalition = None
-        self._pending_reproposals: List[str] = []  # Agents requesting re-proposal
-        self._initialize_default_goals()
+    def recent(self, n: int = 5) -> List[str]:
+        return self.execution_history[-n:]
 
-    def _estimate_task_complexity(self) -> float:
-        complexity = 0.3
-        if self.context.product_data is None:
-            complexity += 0.1
-        if self.context.comparison_data is None:
-            complexity += 0.1
-        if not self.context.is_valid:
-            complexity += 0.2
-        if len(self.context.validation_errors) > 0:
-            complexity += 0.1 * min(3, len(self.context.validation_errors))
-        return min(1.0, complexity)
 
-    def _initialize_default_goals(self):
-        self.goal_manager.add_goal(
-            Goal(
-                id="load_data",
-                description="Load product data",
-                success_criteria=["product_data_loaded"],
-            )
-        )
-        self.goal_manager.add_goal(
-            Goal(
-                id="analyze",
-                description="Analysis",
-                success_criteria=["analysis_complete"],
-            )
-        )
-        self.goal_manager.add_goal(
-            Goal(
-                id="generate",
-                description="Generate content",
-                success_criteria=["content_generated"],
-            )
-        )
+class Orchestrator:
+    """
+    Blackboard-style orchestrator.
+    Agents observe shared GlobalContext and bid for execution.
+    """
 
-    def derive_goals_from_context(self, input_context: dict = None):
-        if not input_context:
-            return
-        if input_context.get("require_comparison"):
-            self.goal_manager.add_goal(
-                Goal(
-                    id="comp",
-                    description="Comparison",
-                    success_criteria=["comparison_complete"],
-                )
-            )
+    def __init__(self, max_steps: int = 20):
+        self.agents: Dict[str, object] = {}
+        self.max_steps = max_steps
+        self.memory = SimpleMemory()
+        self.proposal_system: Optional[SimpleProposalSystem] = None
 
-    def register_agent(self, agent: BaseAgent):
+    def register_agent(self, agent: object):
+        """Add an agent to the pool."""
         self.agents[agent.name] = agent
-        self.proposal_system.register_agent(agent.name, agent)
-        agent.set_event_bus(self.event_bus)
-        # agent.set_memory(self.memory) # BaseAgent stub
-        # agent.set_goal_manager(self.goal_manager) # BaseAgent stub
+        logger.info(f"Registered: {agent.name}")
 
-    def determine_next_agent(self) -> Optional[str]:
-        # Simple proposal selection for simplified version
-        proposals = self.proposal_system.collect_proposals(self.context)
-        if not proposals:
-            return None
-
-        # Just pick best confidence
-        best = self.proposal_system.select_best_proposal(proposals)
-        if best:
-            return best.agent_name
-        return None
-
-    def execute_proposal(self, agent_name: str, directive: TaskDirective):
+    def run(self, context: GlobalContext) -> GlobalContext:
         """
-        Execute an agent with robust error handling.
-        Catches exceptions and returns proper AgentResult on failure.
+        Main orchestration loop: Broadcast → Bid → Select → Execute.
+        
+        Args:
+            context: GlobalContext with product_input already loaded
+            
+        Returns:
+            Updated GlobalContext after all agents have run
         """
-        import traceback
-        from skincare_agent_system.core.models import AgentResult
-
-        try:
+        logger.info("=== Starting Blackboard Orchestration ===")
+        
+        # Initialize proposal system with registered agents
+        if not self.agents:
+            raise ValueError("No agents registered")
+        self.proposal_system = SimpleProposalSystem(list(self.agents.values()))
+        
+        step = 0
+        while step < self.max_steps:
+            step += 1
+            logger.info(f"--- Step {step} ---")
+            
+            # 1. BROADCAST: All agents see current state via propose()
+            # 2. BID: Collect proposals
+            # 3. SELECT: Pick best proposal
+            best_proposal = self.proposal_system.select_next(context)
+            
+            if not best_proposal:
+                logger.info("No valid proposals. Workflow complete.")
+                break
+            
+            # 4. EXECUTE: Run winning agent
+            agent_name = best_proposal.agent_name
             agent = self.agents.get(agent_name)
+            
             if not agent:
-                logger.error(f"✗ Agent {agent_name} not found")
-                return AgentResult(
-                    agent_name=agent_name,
-                    status=AgentStatus.ERROR,
-                    context=self.context,
-                    message=f"Agent {agent_name} not registered"
-                )
-
-            result = agent.run(self.context, directive)
-
-            # Validate result type
-            if not isinstance(result, AgentResult):
-                logger.error(f"✗ Agent {agent_name} returned invalid type: {type(result)}")
-                return AgentResult(
-                    agent_name=agent_name,
-                    status=AgentStatus.ERROR,
-                    context=self.context,
-                    message=f"Invalid result type: {type(result)}"
-                )
-
+                logger.error(f"Agent '{agent_name}' not found")
+                break
+            
+            context.log_step(f"{agent_name}: {best_proposal.action}")
+            
+            directive = TaskDirective(description=best_proposal.action, priority='USER')
+            result = agent.run(context, directive)
+            
+            # Update context from result
+            context = result.context
+            self.memory.log(f"{agent_name}: {result.status.name}")
+            
             if result.status == AgentStatus.ERROR:
-                logger.error(f"✗ Agent {agent_name} failed: {result.message}")
-            else:
-                logger.info(f"✓ {agent_name} executed successfully")
-
-            return result
-
-        except Exception as e:
-            logger.error(f"✗ Execution error in {agent_name}: {e}\n{traceback.format_exc()}")
-            return AgentResult(
-                agent_name=agent_name,
-                status=AgentStatus.ERROR,
-                context=self.context,
-                message=str(e)
-            )
-
-    def execute_with_retry(self, agent_name: str, directive: TaskDirective, max_retries: int = 3):
-        """
-        Execute proposal with exponential backoff retry.
-        """
-        import time
-        from skincare_agent_system.core.models import AgentResult
-
-        for attempt in range(max_retries):
-            result = self.execute_proposal(agent_name, directive)
-
-            if result.status != AgentStatus.ERROR:
-                return result
-
-            if attempt < max_retries - 1:
-                wait_time = 2 ** attempt  # Exponential backoff: 1s, 2s, 4s
-                logger.warning(f"Retry {attempt + 1}/{max_retries} for {agent_name} in {wait_time}s")
-                time.sleep(wait_time)
-
-        logger.error(f"Agent {agent_name} failed after {max_retries} retries")
-        return result
-
-
-    def run(self, initial_product_data=None):
-        system_log.info("=== Starting workflow ===", extra={"type": "workflow_start"})
-        logger.info(f"Starting {self.name}...")
-        self.state_manager.start_workflow()
-
-        # Load initial data if provided
-        if initial_product_data:
-            from skincare_agent_system.core.models import ProductData
-
-            try:
-                if isinstance(initial_product_data, dict):
-                    self.context.product_data = ProductData(**initial_product_data)
-                    self.context.log_decision(
-                        "System", "Initial product data loaded safely"
-                    )
-                    # Publish data loaded event
-                    reproposals = publish_event(
-                        ReactiveEventType.DATA_LOADED,
-                        self.name,
-                        {"product_name": self.context.product_data.name}
-                    )
-                    self._pending_reproposals.extend(reproposals)
-            except Exception as e:
-                logger.error(f"Failed to load initial data: {e}")
-
-        step_count = 0
-        root_directive = TaskDirective(
-            description="Process", priority=TaskPriority.SYSTEM
-        )
-
-        while step_count < self.max_steps:
-            # Collect proposals including reactive ones
-            next_agent_name = self._determine_next_agent_with_reactive()
-            if not next_agent_name:
-                logger.info("No proposals. Workflow complete.")
-                self.state = SystemState.COMPLETED
+                logger.error(f"{agent_name} failed: {result.message}")
+                break
+            
+            # Check if complete
+            if context.stage == ProcessingStage.COMPLETE:
+                logger.info("Stage=COMPLETE. Workflow finished.")
                 break
 
-            self.context.log_step(f"Running {next_agent_name}")
+        if step >= self.max_steps:
+            logger.warning("Max steps reached.")
 
-            # Use robust execute_proposal method
-            result = self.execute_proposal(next_agent_name, root_directive)
-            self.context = result.context
-            self._last_status = result.status
-
-            # Publish completion event and collect re-proposals
-            reproposals = self._publish_result_event(result, next_agent_name)
-            self._pending_reproposals.extend(reproposals)
-
-            if result.status == AgentStatus.ERROR:
-                self.state = SystemState.ERROR
-                break
-
-            if self.goal_manager.all_goals_achieved(self.context):
-                logger.info("All goals achieved.")
-                self.state = SystemState.COMPLETED
-                break
-
-            system_log.workflow_phase("execute", step_count)
-            step_count += 1
-
-        # Publish workflow completed event
-        publish_event(
-            ReactiveEventType.WORKFLOW_COMPLETED,
-            self.name,
-            {"steps": step_count, "state": self.state.value}
-        )
-
-        system_log.info("=== Workflow completed ===", extra={
-            "type": "workflow_end",
-            "state": self.state.value,
-            "steps": step_count
-        })
-
-        if step_count >= self.max_steps:
-            logger.warning("Max steps reached. Stopping.")
-            self.state = SystemState.ERROR
-
-        return self.context
-
-    def _determine_next_agent_with_reactive(self) -> Optional[str]:
-        """Determine next agent, prioritizing reactive re-proposals."""
-        # Check for reactive re-proposals first
-        if self._pending_reproposals:
-            agent_name = self._pending_reproposals.pop(0)
-            logger.info(f"⚡ Reactive re-proposal from {agent_name}")
-            return agent_name
-
-        # Fall back to normal proposal selection
-        return self.determine_next_agent()
-
-    def _publish_result_event(self, result, agent_name: str) -> List[str]:
-        """Publish event based on result and collect re-proposals."""
-        event_type = None
-        event_data = {"agent": agent_name, "status": result.status.value}
-
-        # Map result to event type
-        if "benefits" in agent_name.lower():
-            event_type = ReactiveEventType.BENEFITS_EXTRACTED
-        elif "usage" in agent_name.lower():
-            event_type = ReactiveEventType.USAGE_EXTRACTED
-        elif "question" in agent_name.lower():
-            event_type = ReactiveEventType.QUESTIONS_GENERATED
-        elif "comparison" in agent_name.lower():
-            event_type = ReactiveEventType.COMPARISON_COMPLETE
-        elif "validation" in agent_name.lower():
-            if result.status == AgentStatus.COMPLETE:
-                event_type = ReactiveEventType.VALIDATION_PASSED
-            else:
-                event_type = ReactiveEventType.VALIDATION_FAILED
-                event_data["errors"] = self.context.validation_errors
-        elif "generation" in agent_name.lower():
-            event_type = ReactiveEventType.GENERATION_COMPLETE
-
-        if event_type:
-            return publish_event(event_type, agent_name, event_data)
-        return []
-
+        logger.info(f"=== Workflow Ended: Stage={context.stage.value} ===")
+        return context

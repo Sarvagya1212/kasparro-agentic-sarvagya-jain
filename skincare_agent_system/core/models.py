@@ -1,18 +1,28 @@
 import uuid
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from pydantic import BaseModel, Field, field_validator
 
 
-# --- Transition States (User Requirement) ---
+# --- Processing Stages (Blackboard Pattern) ---
+class ProcessingStage(str, Enum):
+    """Stages of the content generation pipeline."""
+    INGEST = "INGEST"           # Raw data loaded
+    SYNTHESIS = "SYNTHESIS"      # Benefits/Usage extracted  
+    DRAFTING = "DRAFTING"        # FAQ/Content generated
+    VERIFICATION = "VERIFICATION" # Validation in progress
+    COMPLETE = "COMPLETE"        # All done
+
+
+# --- Transition States ---
 class AgentStatus(Enum):
-    CONTINUE = "CONTINUE"  # Formerly SUCCESS
-    RETRY = "RETRY"  # Formerly NEEDS_DATA or partial failure
-    VALIDATION_FAILED = "VALIDATION_FAILED"  # Formerly FAILED in Validation
-    COMPLETE = "COMPLETE"  # Formerly COMPLETED (System finish)
-    ERROR = "ERROR"  # Catastrophic failure
+    CONTINUE = "CONTINUE"
+    RETRY = "RETRY"
+    VALIDATION_FAILED = "VALIDATION_FAILED"
+    COMPLETE = "COMPLETE"
+    ERROR = "ERROR"
 
 
 class SystemState(Enum):
@@ -125,7 +135,7 @@ class AgentContext(BaseModel):
     comparison_data: Optional[ProductData] = None
 
     # Analysis results
-    analysis_results: Optional[AnalysisResults] = None
+    analysis_results: Dict[str, Any] = Field(default_factory=dict)
     generated_questions: List[Any] = Field(default_factory=list)
 
     # Validation state
@@ -152,14 +162,53 @@ class AgentResult(BaseModel):
 
     agent_name: str
     status: AgentStatus
-    context: AgentContext
+    context: "GlobalContext"  # Forward reference
     message: str = ""
 
     @field_validator('message')
     @classmethod
     def validate_error_message(cls, v, info):
-        # If status is ERROR, message should be present
         if info.data.get('status') == AgentStatus.ERROR and not v:
             return "Unknown error"
         return v
 
+
+# --- Unified Schema (Blackboard Pattern) ---
+class ContentSchema(BaseModel):
+    """Generated content artifacts - all outputs in one place."""
+    usage: str = ""
+    faq_questions: List[Tuple[str, str, str]] = Field(default_factory=list)
+    comparison: Dict[str, Any] = Field(default_factory=dict)
+
+
+class GlobalContext(BaseModel):
+    """
+    The Blackboard - single source of truth for all agents.
+    Immutable input + mutable artifacts + validation state.
+    """
+    
+    # Processing stage
+    stage: ProcessingStage = ProcessingStage.INGEST
+    
+    # Immutable inputs (set once at start)
+    product_input: Optional[ProductData] = None
+    comparison_input: Optional[ProductData] = None
+    
+    # Generated content (artifacts)
+    generated_content: ContentSchema = Field(default_factory=ContentSchema)
+    
+    # Validation state
+    errors: List[str] = Field(default_factory=list)
+    is_valid: bool = False
+    
+    # Metadata
+    trace_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    created_at: str = Field(default_factory=lambda: datetime.now().isoformat())
+    execution_history: List[str] = Field(default_factory=list)
+    
+    def log_step(self, step_name: str):
+        self.execution_history.append(step_name)
+    
+    def advance_stage(self, new_stage: ProcessingStage):
+        """Move to next processing stage."""
+        self.stage = new_stage

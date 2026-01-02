@@ -29,28 +29,7 @@
       "product_b": "Brightening, Antioxidant protection, Fine line reduction"
     }
   ],
-  "differences": [
-    {
-      "aspect": "Price",
-      "winner": "GlowBoost",
-      "reason": "\u20b9200 cheaper"
-    },
-    {
-      "aspect": "Ingredients",
-      "winner": "RadiantGlow",
-      "reason": "More antioxidants"
-    },
-    {
-      "aspect": "Skin types",
-      "winner": "RadiantGlow",
-      "reason": "Wider compatibility"
-    }
-  ],
-  "recommendation": "Analyze product benefits from ingredient data",
-  "winner_categories": {
-    "best_value": "GlowBoost Vitamin C Serum",
-    "most_comprehensive": "RadiantGlow Vitamin C Cream",
-    "most_benefits": "RadiantGlow Vitamin C Cream",
-    "higher_concentration": "RadiantGlow Vitamin C Cream"
-  }
+  "differences": [],
+  "recommendation": "No recommendation generated.",
+  "winner_categories": {}
 }

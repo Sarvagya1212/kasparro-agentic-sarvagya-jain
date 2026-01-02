@@ -1,0 +1,47 @@
+{
+    "product": {
+        "name": "GlowBoost Vitamin C Serum",
+        "brand": "GlowBoost",
+        "concentration": "10% Vitamin C",
+        "key_ingredients": [
+            "Vitamin C",
+            "Hyaluronic Acid"
+        ],
+        "benefits": [
+            "Brightening",
+            "Fades dark spots"
+        ],
+        "price": 699.0,
+        "currency": "INR",
+        "skin_types": [
+            "Oily",
+            "Combination"
+        ],
+        "side_effects": "Mild tingling for sensitive skin",
+        "usage_instructions": "Apply 2-3 drops in the morning before sunscreen"
+    },
+    "comparison_product": {
+        "name": "RadiantGlow Vitamin C Cream",
+        "brand": "RadiantGlow",
+        "concentration": "15% Vitamin C",
+        "key_ingredients": [
+            "Vitamin C",
+            "Ferulic Acid",
+            "Vitamin E"
+        ],
+        "benefits": [
+            "Brightening",
+            "Antioxidant protection",
+            "Fine line reduction"
+        ],
+        "price": 899.0,
+        "currency": "INR",
+        "skin_types": [
+            "Normal",
+            "Dry",
+            "Combination"
+        ],
+        "side_effects": "May cause dryness initially",
+        "usage_instructions": "Apply morning and evening to clean skin"
+    }
+}

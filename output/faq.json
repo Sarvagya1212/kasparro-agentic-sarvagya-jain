@@ -30,7 +30,7 @@
     {
       "id": 6,
       "question": "Can I use GlowBoost Vitamin C Serum with other products?",
-      "answer": "Yes, GlowBoost Vitamin C Serum can be layered with other skincare products. Apply after cleansing and before heavier creams."
+      "answer": "Yes, GlowBoost Vitamin C Serum can be layered with other products."
     },
     {
       "id": 7,
@@ -45,7 +45,7 @@
     {
       "id": 9,
       "question": "Is GlowBoost Vitamin C Serum safe for sensitive skin?",
-      "answer": "If you have sensitive skin, perform a patch test first. Mild tingling for sensitive skin"
+      "answer": "Perform a patch test first. Mild tingling for sensitive skin"
     },
     {
       "id": 10,
@@ -55,17 +55,17 @@
     {
       "id": 11,
       "question": "Where can I buy GlowBoost Vitamin C Serum?",
-      "answer": "You can purchase GlowBoost Vitamin C Serum from authorized retailers and online stores."
+      "answer": "Purchase from authorized retailers and online stores."
     },
     {
       "id": 12,
-      "question": "How long until I see results from GlowBoost Vitamin C Serum?",
-      "answer": "Most users notice improvements within 2-4 weeks of consistent use."
+      "question": "How long until I see results?",
+      "answer": "Most users notice improvements within 2-4 weeks."
     },
     {
       "id": 13,
       "question": "Will GlowBoost Vitamin C Serum work for dark spots?",
-      "answer": "Yes, GlowBoost Vitamin C Serum helps with brightening and fading dark spots due to its active ingredients."
+      "answer": "Yes, GlowBoost Vitamin C Serum helps with brightening and fading dark spots."
     },
     {
       "id": 14,
@@ -78,5 +78,5 @@
       "answer": "Yes, our packaging is designed to be recyclable."
     }
   ],
-  "generated_at": "2026-01-02T17:19:22.244548"
+  "generated_at": "2026-01-02T21:04:38.046406"
 }
