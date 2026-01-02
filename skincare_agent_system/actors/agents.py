@@ -1,13 +1,19 @@
 """
 Base Agent with Autonomy Support.
 Agents can propose actions, reason with CoT, and self-reflect.
-Now with LLM integration for dynamic reasoning and EVENT PUBLISHING.
+
+Phase 1-2 Upgrades:
+- ReAct reasoning loops (Thought → Action → Observation)
+- Internal agent goals with status tracking
+- Spontaneous activation without orchestrator dependency
+- Preemption and checkpoint/resume support
 """
 
+import asyncio
 import logging
 import os
 from abc import ABC, abstractmethod
-from typing import Any, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 from skincare_agent_system.cognition.reasoning import (
     ChainOfThought,
@@ -25,6 +31,24 @@ from skincare_agent_system.core.models import (
 )
 from skincare_agent_system.core.proposals import AgentProposal, Event, EventType
 from skincare_agent_system.infrastructure.tracer import get_tracer
+
+# Import new autonomy modules
+from skincare_agent_system.cognition.react_reasoning import (
+    ReActLoop,
+    ReActResult,
+    ConversationHistory,
+    create_react_loop,
+)
+from skincare_agent_system.cognition.agent_goals import (
+    AgentGoal,
+    AgentGoalManager,
+    GoalStatus,
+    create_default_goals,
+)
+from skincare_agent_system.core.agent_activation import (
+    AgentState,
+    ActivationTrigger,
+)
 
 logger = logging.getLogger("BaseAgent")
 
@@ -70,12 +94,34 @@ class BaseAgent(ABC):
         # PHASE 3: Memory reference for memory-influenced proposals
         self._memory: Optional[Any] = None
 
-        # PHASE 2: Goal manager reference for subgoal proposals
+        # PHASE 2: Goal manager reference for subgoal proposals (system-level)
         self._goal_manager: Optional[Any] = None
 
         # Agent Identity and Credentials
         self._identity = None
         self._register_identity()
+
+        # ==================== PHASE 1-2 AUTONOMY UPGRADES ====================
+
+        # ReAct reasoning loop for Thought → Action → Observation pattern
+        self._react_loop: Optional[ReActLoop] = None
+        self._conversation_history = ConversationHistory(max_turns=20)
+
+        # Internal agent goals (Task 1.2)
+        self.goals = AgentGoalManager(self.name)
+        self._setup_default_goals()
+
+        # Activation state (Task 1.3)
+        self._activation_state = AgentState.SLEEPING
+        self._activation_triggers: List[ActivationTrigger] = []
+        self._wake_reason: Optional[str] = None
+
+        # Preemption support (Task 2.3)
+        self._cancellation_requested = False
+        self._checkpoint_data: Dict[str, Any] = {}
+        self._on_preempt_callback: Optional[Callable[[str], None]] = None
+        self._on_resume_callback: Optional[Callable[[Dict], None]] = None
+        self._current_progress: float = 0.0
 
     def set_event_bus(self, event_bus: Any):
         """Set the event bus for agent-to-agent communication."""
@@ -651,3 +697,351 @@ Respond in JSON format:
         return AgentResult(
             agent_name=self.name, status=status, context=context, message=message
         )
+
+    # ==================== PHASE 1: ReAct REASONING (Task 1.1) ====================
+
+    def _setup_default_goals(self) -> None:
+        """Set up default goals for this agent type. Override in subclasses."""
+        pass  # Default: no goals, subclasses should override
+
+    def get_react_loop(self) -> ReActLoop:
+        """Get or create the ReAct reasoning loop."""
+        if self._react_loop is None:
+            llm = self._get_llm()
+            self._react_loop = ReActLoop(
+                llm_client=llm,
+                max_iterations=5,
+                confidence_threshold=0.7
+            )
+        return self._react_loop
+
+    async def propose_with_react(
+        self,
+        context: AgentContext,
+        goal: str,
+        available_actions: List[str]
+    ) -> Optional[AgentProposal]:
+        """
+        Use ReAct reasoning to generate a proposal.
+
+        This implements the Thought → Action → Observation loop:
+        1. Think about current state and goal
+        2. Choose an action
+        3. Observe the result
+        4. Repeat until confident
+
+        Args:
+            context: Current agent context
+            goal: The goal to achieve
+            available_actions: Actions this agent can take
+
+        Returns:
+            AgentProposal based on ReAct reasoning
+        """
+        react = self.get_react_loop()
+
+        # Define action executor (simulate actions for reasoning)
+        def action_executor(action: str, inputs: Dict) -> str:
+            """Execute action and return observation."""
+            if action == "check_context":
+                return self._describe_context(context)
+            elif action == "evaluate_goals":
+                return self._describe_goal_status()
+            elif action == "assess_capability":
+                can_do = self.can_handle(context)
+                return f"Can handle: {can_do}"
+            else:
+                return f"Action '{action}' acknowledged"
+
+        try:
+            result: ReActResult = await react.reason_and_act(
+                context=context,
+                goal=goal,
+                available_actions=available_actions + ["check_context", "evaluate_goals", "assess_capability"],
+                action_executor=action_executor,
+                agent_identity=self.get_agent_identity()
+            )
+
+            # Add to conversation history
+            self._conversation_history.add_message(
+                "assistant",
+                f"ReAct result: {result.final_thought}"
+            )
+
+            if result.success:
+                return AgentProposal(
+                    agent_name=self.name,
+                    action=result.final_action,
+                    confidence=result.confidence,
+                    reason=f"[ReAct] {result.final_thought}",
+                    preconditions_met=True,
+                    priority=5
+                )
+            else:
+                return AgentProposal(
+                    agent_name=self.name,
+                    action="defer",
+                    confidence=result.confidence * 0.5,
+                    reason=f"[ReAct-Incomplete] {result.error or result.final_thought}",
+                    preconditions_met=False,
+                    priority=1
+                )
+
+        except Exception as e:
+            logger.warning(f"ReAct reasoning failed for {self.name}: {e}")
+            return None
+
+    def _describe_context(self, context: AgentContext) -> str:
+        """Generate a description of current context for ReAct."""
+        parts = []
+        parts.append(f"Product: {'loaded' if context.product_data else 'not loaded'}")
+        parts.append(f"Comparison: {'loaded' if context.comparison_data else 'not loaded'}")
+        parts.append(f"Analysis: {'complete' if context.analysis_results else 'pending'}")
+        parts.append(f"Valid: {context.is_valid}")
+        parts.append(f"Steps: {len(context.execution_history)}")
+        return "\n".join(parts)
+
+    def _describe_goal_status(self) -> str:
+        """Generate description of goal progress."""
+        summary = self.goals.get_progress_summary()
+        return (
+            f"Goals: {summary['completed']}/{summary['total']} complete, "
+            f"{summary['in_progress']} in progress, {summary['failed']} failed"
+        )
+
+    # ==================== PHASE 1: AGENT GOALS (Task 1.2) ====================
+
+    def add_goal(
+        self,
+        goal_id: str,
+        description: str,
+        success_criteria: List[str],
+        priority: int = 5,
+        on_complete: Optional[Callable] = None
+    ) -> None:
+        """Add an internal goal for this agent."""
+        goal = AgentGoal(
+            id=goal_id,
+            description=description,
+            success_criteria=success_criteria,
+            priority=priority
+        )
+        self.goals.add_goal(goal, on_complete=on_complete)
+
+    def evaluate_goal_progress(self, context: AgentContext) -> Dict[str, float]:
+        """Evaluate progress of all agent goals against current context."""
+        return self.goals.evaluate_progress(context)
+
+    def derive_action_from_goal(
+        self,
+        context: AgentContext
+    ) -> Optional[AgentProposal]:
+        """
+        Derive next action from highest priority unmet goal.
+
+        This enables goal-driven behavior where agents decide
+        actions based on what they need to achieve, not just context.
+        """
+        action_info = self.goals.derive_next_action(context)
+
+        if not action_info:
+            return None
+
+        return AgentProposal(
+            agent_name=self.name,
+            action=action_info["suggested_action"],
+            confidence=0.7,
+            reason=f"Goal-driven: {action_info['goal_description']} "
+                   f"(criterion: {action_info['criterion']})",
+            preconditions_met=True,
+            priority=action_info["priority"]
+        )
+
+    def all_goals_achieved(self) -> bool:
+        """Check if all agent goals are achieved."""
+        return self.goals.all_goals_achieved()
+
+    def on_goal_complete(self, goal: AgentGoal) -> None:
+        """Callback when a goal is completed. Override in subclasses."""
+        logger.info(f"Agent {self.name} completed goal: {goal.description}")
+        # Publish goal completion event
+        self.publish_event(
+            "agent_goal_achieved",
+            {"goal_id": goal.id, "goal_description": goal.description}
+        )
+
+    # ==================== PHASE 1: SPONTANEOUS ACTIVATION (Task 1.3) ====================
+
+    def get_activation_state(self) -> AgentState:
+        """Get current activation state."""
+        return self._activation_state
+
+    def set_activation_state(self, state: AgentState) -> None:
+        """Set activation state."""
+        old_state = self._activation_state
+        self._activation_state = state
+        logger.debug(f"Agent {self.name}: {old_state.value} -> {state.value}")
+
+    def get_activation_triggers(self) -> List[ActivationTrigger]:
+        """
+        Get activation triggers for this agent.
+        Override in subclasses to define specific triggers.
+        """
+        return self._activation_triggers
+
+    def add_activation_trigger(self, trigger: ActivationTrigger) -> None:
+        """Add an activation trigger."""
+        self._activation_triggers.append(trigger)
+        logger.debug(f"Agent {self.name} added trigger: {trigger.event_type}")
+
+    async def on_wake(self, reason: str) -> None:
+        """
+        Called when agent is woken up by activation system.
+        Override in subclasses for specific wake behavior.
+        """
+        self._wake_reason = reason
+        self._activation_state = AgentState.ACTIVE
+        logger.info(f"Agent {self.name} woke up: {reason}")
+
+        # Evaluate goals on wake
+        if self._memory:
+            self.goals.evaluate_progress
+
+    async def go_to_sleep(self) -> None:
+        """Put agent to sleep."""
+        self._activation_state = AgentState.SLEEPING
+        self._wake_reason = None
+        logger.info(f"Agent {self.name} going to sleep")
+
+    async def poll_for_activation(self) -> bool:
+        """
+        Poll to check if agent should self-activate.
+        Override in subclasses for specific polling logic.
+
+        Returns:
+            True if agent should activate, False otherwise
+        """
+        # Check if any goals need attention
+        if not self.goals.all_goals_achieved():
+            active_goals = self.goals.get_active_goals()
+            if active_goals:
+                return True
+        return False
+
+    # ==================== PHASE 2: PREEMPTION SUPPORT (Task 2.3) ====================
+
+    def request_cancellation(self, reason: str = "preemption") -> None:
+        """Request this agent to cancel its current execution."""
+        self._cancellation_requested = True
+        logger.info(f"Agent {self.name} cancellation requested: {reason}")
+
+    def check_cancellation(self) -> bool:
+        """
+        Check if cancellation is requested.
+
+        Agents should call this periodically during long operations
+        and gracefully stop if True.
+        """
+        return self._cancellation_requested
+
+    def acknowledge_cancellation(self) -> None:
+        """Acknowledge that cancellation has been received."""
+        logger.info(f"Agent {self.name} acknowledged cancellation")
+        # Notify preemption manager if available
+        try:
+            from skincare_agent_system.core.preemption import get_preemption_manager
+            manager = get_preemption_manager()
+            manager.acknowledge_cancellation(self.name)
+        except Exception:
+            pass
+
+    def clear_cancellation(self) -> None:
+        """Clear cancellation flag (e.g., after resume)."""
+        self._cancellation_requested = False
+
+    def create_checkpoint(self) -> Dict[str, Any]:
+        """
+        Create a checkpoint of agent's current state.
+
+        Override in subclasses to save specific state.
+        """
+        checkpoint = {
+            "agent_name": self.name,
+            "progress": self._current_progress,
+            "goal_states": {
+                g.id: g.status.value
+                for g in self.goals.get_all_goals()
+            },
+            "conversation_length": len(self._conversation_history),
+            "wake_reason": self._wake_reason,
+            "activation_state": self._activation_state.value,
+        }
+        self._checkpoint_data = checkpoint
+        return checkpoint
+
+    def restore_from_checkpoint(self, checkpoint: Dict[str, Any]) -> None:
+        """
+        Restore agent state from checkpoint.
+
+        Override in subclasses to restore specific state.
+        """
+        self._current_progress = checkpoint.get("progress", 0.0)
+        self._wake_reason = checkpoint.get("wake_reason")
+
+        state_value = checkpoint.get("activation_state", "sleeping")
+        try:
+            self._activation_state = AgentState(state_value)
+        except ValueError:
+            self._activation_state = AgentState.SLEEPING
+
+        self._cancellation_requested = False
+        logger.info(f"Agent {self.name} restored from checkpoint (progress: {self._current_progress:.1%})")
+
+    def on_preempted(self, reason: str) -> None:
+        """
+        Called when agent is preempted.
+        Override for custom preemption handling.
+        """
+        logger.info(f"Agent {self.name} was preempted: {reason}")
+
+        # Create checkpoint before stopping
+        self.create_checkpoint()
+
+        # Call callback if set
+        if self._on_preempt_callback:
+            self._on_preempt_callback(reason)
+
+        # Publish preemption event
+        self.publish_event(
+            "agent_preempted",
+            {"reason": reason, "checkpoint_created": True}
+        )
+
+    def on_resume(self, checkpoint: Dict[str, Any]) -> None:
+        """
+        Called when agent resumes from checkpoint.
+        Override for custom resume handling.
+        """
+        self.restore_from_checkpoint(checkpoint)
+
+        # Call callback if set
+        if self._on_resume_callback:
+            self._on_resume_callback(checkpoint)
+
+        logger.info(f"Agent {self.name} resumed from checkpoint")
+
+    def update_progress(self, progress: float) -> None:
+        """Update current progress (0.0-1.0) for checkpointing."""
+        self._current_progress = max(0.0, min(1.0, progress))
+
+    def set_preemption_callback(
+        self,
+        on_preempt: Optional[Callable[[str], None]] = None,
+        on_resume: Optional[Callable[[Dict], None]] = None
+    ) -> None:
+        """Set callbacks for preemption events."""
+        if on_preempt:
+            self._on_preempt_callback = on_preempt
+        if on_resume:
+            self._on_resume_callback = on_resume
+
