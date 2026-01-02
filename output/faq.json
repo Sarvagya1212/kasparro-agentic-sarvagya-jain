@@ -1,121 +1,109 @@
 {
   "product": "GlowBoost Vitamin C Serum",
-  "total_questions": 19,
+  "total_questions": 17,
   "faqs": [
     {
       "id": 1,
       "question": "What is GlowBoost Vitamin C Serum?",
-      "answer": "GlowBoost Vitamin C Serum is a skincare product.",
-      "category": "General"
+      "answer": "GlowBoost Vitamin C Serum is a skincare product designed for skincare.",
+      "category": "Informational"
     },
     {
       "id": 2,
-      "question": "What are the main ingredients in GlowBoost Vitamin C Serum?",
-      "answer": "[\"Vitamin C\", \"Hyaluronic Acid\"]",
-      "category": "General"
+      "question": "What are the key ingredients in GlowBoost Vitamin C Serum?",
+      "answer": "The key ingredients include Vitamin C, Hyaluronic Acid.",
+      "category": "Informational"
     },
     {
       "id": 3,
-      "question": "What benefits can I expect from using GlowBoost Vitamin C Serum?",
-      "answer": "You can expect brightening and fading of dark spots.",
-      "category": "General"
+      "question": "What is the concentration of active ingredients?",
+      "answer": "This product contains 10% Vitamin C.",
+      "category": "Informational"
     },
     {
       "id": 4,
-      "question": "How should I use GlowBoost Vitamin C Serum?",
-      "answer": "Apply 2–3 drops in the morning before sunscreen.",
-      "category": "General"
+      "question": "How do I use GlowBoost Vitamin C Serum?",
+      "answer": "Apply as directed",
+      "category": "Usage"
     },
     {
       "id": 5,
-      "question": "Is GlowBoost Vitamin C Serum suitable for all skin types?",
-      "answer": "We recommend consulting a dermatologist to ensure it's suitable for your specific skin type.",
-      "category": "General"
+      "question": "How often should I use this product?",
+      "answer": "For best results, use as part of your daily skincare routine. Follow the specific instructions on the packaging.",
+      "category": "Usage"
     },
     {
       "id": 6,
-      "question": "Can I use GlowBoost Vitamin C Serum at night?",
-      "answer": "It is recommended to use it in the morning before sunscreen.",
-      "category": "General"
+      "question": "Can I use this with other skincare products?",
+      "answer": "Yes, this product can be incorporated into your existing routine. Apply in order of thinnest to thickest consistency.",
+      "category": "Usage"
     },
     {
       "id": 7,
-      "question": "Does GlowBoost Vitamin C Serum contain any fragrances?",
-      "answer": "We do not provide information about fragrances. It's best to check the product label.",
-      "category": "General"
+      "question": "Are there any side effects of using GlowBoost Vitamin C Serum?",
+      "answer": "Mild tingling for sensitive skin",
+      "category": "Safety"
     },
     {
       "id": 8,
-      "question": "How long does it take to see results from using GlowBoost Vitamin C Serum?",
-      "answer": "Results may vary, but you may start to notice improvements within a few weeks.",
-      "category": "General"
+      "question": "Is this suitable for my skin type?",
+      "answer": "This product is formulated for Oily, Combination skin types.",
+      "category": "Safety"
     },
     {
       "id": 9,
-      "question": "Can I use other skincare products with GlowBoost Vitamin C Serum?",
-      "answer": "Consult a dermatologist for advice on combining skincare products.",
-      "category": "General"
+      "question": "Should I do a patch test?",
+      "answer": "Yes, we recommend doing a patch test before full application, especially if you have sensitive skin.",
+      "category": "Safety"
     },
     {
       "id": 10,
-      "question": "Is GlowBoost Vitamin C Serum cruelty-free?",
-      "answer": "We do not provide information about the product's cruelty status. Check the product label or contact the manufacturer.",
-      "category": "General"
+      "question": "How much does GlowBoost Vitamin C Serum cost?",
+      "answer": "The price is ₹699.0.",
+      "category": "Purchase"
     },
     {
       "id": 11,
-      "question": "Can I use GlowBoost Vitamin C Serum if I have sensitive skin?",
-      "answer": "We recommend consulting a dermatologist to ensure it's suitable for your specific skin type.",
-      "category": "General"
+      "question": "What size is the product?",
+      "answer": "This product comes in 30ml size.",
+      "category": "Purchase"
     },
     {
       "id": 12,
-      "question": "How much GlowBoost Vitamin C Serum should I use?",
-      "answer": "Apply 2–3 drops.",
-      "category": "General"
+      "question": "Is this product worth the price?",
+      "answer": "At ₹699.0, this product offers excellent value with high-quality ingredients and proven results.",
+      "category": "Purchase"
     },
     {
       "id": 13,
-      "question": "Should I apply GlowBoost Vitamin C Serum on a clean face?",
-      "answer": "Yes, it's best to apply it on a clean, dry face.",
-      "category": "General"
+      "question": "How does GlowBoost Vitamin C Serum compare to other similar products?",
+      "answer": "GlowBoost Vitamin C Serum stands out due to its unique formulation and concentration of active ingredients.",
+      "category": "Comparison"
     },
     {
       "id": 14,
-      "question": "Can I use GlowBoost Vitamin C Serum with sunscreen?",
-      "answer": "Yes, apply the serum before sunscreen.",
-      "category": "General"
+      "question": "What makes this product different?",
+      "answer": "This product combines high-quality ingredients with an effective delivery system for optimal results.",
+      "category": "Comparison"
     },
     {
       "id": 15,
-      "question": "How long does a bottle of GlowBoost Vitamin C Serum last?",
-      "answer": "The duration depends on usage. It's best to check the product label.",
-      "category": "General"
+      "question": "When will I see results?",
+      "answer": "Most users notice improvements within 2-4 weeks of consistent use. For best results, use as directed.",
+      "category": "Results"
     },
     {
       "id": 16,
-      "question": "Can I use GlowBoost Vitamin C Serum if I'm pregnant or breastfeeding?",
-      "answer": "We recommend consulting a healthcare professional before using any new skincare product.",
-      "category": "General"
+      "question": "What results can I expect from GlowBoost Vitamin C Serum?",
+      "answer": "You can expect: Brightening, Fades dark spots.",
+      "category": "Results"
     },
     {
       "id": 17,
-      "question": "Does GlowBoost Vitamin C Serum have any side effects?",
-      "answer": "Possible side effects may include skin irritation or allergic reactions. Stop using the product if you experience any adverse effects.",
-      "category": "General"
-    },
-    {
-      "id": 18,
-      "question": "Can I use GlowBoost Vitamin C Serum on my eyes?",
-      "answer": "We do not recommend applying skincare products directly to the eye area.",
-      "category": "General"
-    },
-    {
-      "id": 19,
-      "question": "Can I use GlowBoost Vitamin C Serum with other Vitamin C products?",
-      "answer": "Consult a dermatologist for advice on combining skincare products.",
-      "category": "General"
+      "question": "How long does one bottle last?",
+      "answer": "With regular use as directed, one bottle typically lasts 1-2 months.",
+      "category": "Results"
     }
   ],
-  "generated_at": "2026-01-02T13:07:38.155098"
+  "generated_at": "2026-01-02T13:10:32.561997"
 }
