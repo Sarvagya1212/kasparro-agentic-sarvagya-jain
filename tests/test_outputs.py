@@ -6,7 +6,8 @@ from skincare_agent_system.templates.product_page_template import ProductPageTem
 
 def test_faq_template_output():
     template = FAQTemplate()
-    data = {"product_name": "TestProduct", "qa_pairs": [("Q1", "A1"), ("Q2", "A2")]}
+    # Now expects (question, answer, category) tuples
+    data = {"product_name": "TestProduct", "qa_pairs": [("Q1", "A1", "Cat1"), ("Q2", "A2", "Cat2")]}
     output = template.render(data)
     assert output["product"] == "TestProduct"
     assert len(output["faqs"]) == 2
