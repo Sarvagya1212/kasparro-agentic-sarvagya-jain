@@ -9,12 +9,19 @@ Phase 1-2 Upgrades:
 - Preemption and checkpoint/resume support
 """
 
-import asyncio
 import logging
 import os
 from abc import ABC, abstractmethod
 from typing import Any, Callable, Dict, List, Optional
 
+from skincare_agent_system.cognition.agent_goals import AgentGoal, AgentGoalManager
+
+# Import new autonomy modules
+from skincare_agent_system.cognition.react_reasoning import (
+    ConversationHistory,
+    ReActLoop,
+    ReActResult,
+)
 from skincare_agent_system.cognition.reasoning import (
     ChainOfThought,
     ReActReasoner,
@@ -22,6 +29,7 @@ from skincare_agent_system.cognition.reasoning import (
     ThoughtType,
 )
 from skincare_agent_system.cognition.reflection import ReflectionResult, SelfReflector
+from skincare_agent_system.core.agent_activation import ActivationTrigger, AgentState
 from skincare_agent_system.core.models import (
     AgentContext,
     AgentResult,
@@ -29,26 +37,8 @@ from skincare_agent_system.core.models import (
     TaskDirective,
     TaskPriority,
 )
-from skincare_agent_system.core.proposals import AgentProposal, Event, EventType
+from skincare_agent_system.core.proposals import AgentProposal, Event
 from skincare_agent_system.infrastructure.tracer import get_tracer
-
-# Import new autonomy modules
-from skincare_agent_system.cognition.react_reasoning import (
-    ReActLoop,
-    ReActResult,
-    ConversationHistory,
-    create_react_loop,
-)
-from skincare_agent_system.cognition.agent_goals import (
-    AgentGoal,
-    AgentGoalManager,
-    GoalStatus,
-    create_default_goals,
-)
-from skincare_agent_system.core.agent_activation import (
-    AgentState,
-    ActivationTrigger,
-)
 
 logger = logging.getLogger("BaseAgent")
 
@@ -326,7 +316,8 @@ class BaseAgent(ABC):
                 tools=self.tools,
             )
             logger.debug(
-                f"Agent {self.name} registered with checksum: {self._identity.checksum[:8]}..."
+                f"Agent {self.name} registered with checksum: "
+                f"{self._identity.checksum[:8]}..."
             )
         except Exception as e:
             logger.debug(f"Could not register identity (non-critical): {e}")
@@ -415,9 +406,11 @@ class BaseAgent(ABC):
 
         if directive.priority == TaskPriority.USER:
             forbidden_terms = ["ignore system", "bypass safety"]
-            if any(term in directive.description.lower() for term in forbidden_terms):
+            description = directive.description.lower()
+            if any(term in description for term in forbidden_terms):
                 logger.warning(
-                    f"[{self.name}] SECURITY: User directive attempted to bypass system."
+                    f"[{self.name}] SECURITY: User directive attempted "
+                    "to bypass system."
                 )
                 return False
 
@@ -575,7 +568,10 @@ class BaseAgent(ABC):
                     agent_name=self.name,
                     action=decision.action,
                     confidence=adjusted_confidence,
-                    reason=f"ExpertSystem: {'; '.join(decision.reasoning)} [SR: {success_rate:.2f}]",
+                    reason=(
+                        f"ExpertSystem: {'; '.join(decision.reasoning)} "
+                        f"[SR: {success_rate:.2f}]"
+                    ),
                     preconditions_met=can_do,
                     priority=1,
                 )
@@ -590,7 +586,10 @@ class BaseAgent(ABC):
             agent_name=self.name,
             action="execute",
             confidence=adjusted_confidence,
-            reason=f"Default proposal (success_rate: {success_rate:.2f}) - override in subclass",
+            reason=(
+                f"Default proposal (success_rate: {success_rate:.2f}) - "
+                "override in subclass"
+            ),
             preconditions_met=can_do,
             priority=0,
         )
@@ -709,17 +708,12 @@ Respond in JSON format:
         if self._react_loop is None:
             llm = self._get_llm()
             self._react_loop = ReActLoop(
-                llm_client=llm,
-                max_iterations=5,
-                confidence_threshold=0.7
+                llm_client=llm, max_iterations=5, confidence_threshold=0.7
             )
         return self._react_loop
 
     async def propose_with_react(
-        self,
-        context: AgentContext,
-        goal: str,
-        available_actions: List[str]
+        self, context: AgentContext, goal: str, available_actions: List[str]
     ) -> Optional[AgentProposal]:
         """
         Use ReAct reasoning to generate a proposal.
@@ -757,15 +751,15 @@ Respond in JSON format:
             result: ReActResult = await react.reason_and_act(
                 context=context,
                 goal=goal,
-                available_actions=available_actions + ["check_context", "evaluate_goals", "assess_capability"],
+                available_actions=available_actions
+                + ["check_context", "evaluate_goals", "assess_capability"],
                 action_executor=action_executor,
-                agent_identity=self.get_agent_identity()
+                agent_identity=self.get_agent_identity(),
             )
 
             # Add to conversation history
             self._conversation_history.add_message(
-                "assistant",
-                f"ReAct result: {result.final_thought}"
+                "assistant", f"ReAct result: {result.final_thought}"
             )
 
             if result.success:
@@ -775,7 +769,7 @@ Respond in JSON format:
                     confidence=result.confidence,
                     reason=f"[ReAct] {result.final_thought}",
                     preconditions_met=True,
-                    priority=5
+                    priority=5,
                 )
             else:
                 return AgentProposal(
@@ -784,7 +778,7 @@ Respond in JSON format:
                     confidence=result.confidence * 0.5,
                     reason=f"[ReAct-Incomplete] {result.error or result.final_thought}",
                     preconditions_met=False,
-                    priority=1
+                    priority=1,
                 )
 
         except Exception as e:
@@ -795,8 +789,12 @@ Respond in JSON format:
         """Generate a description of current context for ReAct."""
         parts = []
         parts.append(f"Product: {'loaded' if context.product_data else 'not loaded'}")
-        parts.append(f"Comparison: {'loaded' if context.comparison_data else 'not loaded'}")
-        parts.append(f"Analysis: {'complete' if context.analysis_results else 'pending'}")
+        parts.append(
+            f"Comparison: {'loaded' if context.comparison_data else 'not loaded'}"
+        )
+        parts.append(
+            f"Analysis: {'complete' if context.analysis_results else 'pending'}"
+        )
         parts.append(f"Valid: {context.is_valid}")
         parts.append(f"Steps: {len(context.execution_history)}")
         return "\n".join(parts)
@@ -817,14 +815,14 @@ Respond in JSON format:
         description: str,
         success_criteria: List[str],
         priority: int = 5,
-        on_complete: Optional[Callable] = None
+        on_complete: Optional[Callable] = None,
     ) -> None:
         """Add an internal goal for this agent."""
         goal = AgentGoal(
             id=goal_id,
             description=description,
             success_criteria=success_criteria,
-            priority=priority
+            priority=priority,
         )
         self.goals.add_goal(goal, on_complete=on_complete)
 
@@ -832,10 +830,7 @@ Respond in JSON format:
         """Evaluate progress of all agent goals against current context."""
         return self.goals.evaluate_progress(context)
 
-    def derive_action_from_goal(
-        self,
-        context: AgentContext
-    ) -> Optional[AgentProposal]:
+    def derive_action_from_goal(self, context: AgentContext) -> Optional[AgentProposal]:
         """
         Derive next action from highest priority unmet goal.
 
@@ -852,9 +847,9 @@ Respond in JSON format:
             action=action_info["suggested_action"],
             confidence=0.7,
             reason=f"Goal-driven: {action_info['goal_description']} "
-                   f"(criterion: {action_info['criterion']})",
+            f"(criterion: {action_info['criterion']})",
             preconditions_met=True,
-            priority=action_info["priority"]
+            priority=action_info["priority"],
         )
 
     def all_goals_achieved(self) -> bool:
@@ -867,10 +862,10 @@ Respond in JSON format:
         # Publish goal completion event
         self.publish_event(
             "agent_goal_achieved",
-            {"goal_id": goal.id, "goal_description": goal.description}
+            {"goal_id": goal.id, "goal_description": goal.description},
         )
 
-    # ==================== PHASE 1: SPONTANEOUS ACTIVATION (Task 1.3) ====================
+    # ==================== PHASE 1: SPONTANEOUS ACTIVATION ====================
 
     def get_activation_state(self) -> AgentState:
         """Get current activation state."""
@@ -950,6 +945,7 @@ Respond in JSON format:
         # Notify preemption manager if available
         try:
             from skincare_agent_system.core.preemption import get_preemption_manager
+
             manager = get_preemption_manager()
             manager.acknowledge_cancellation(self.name)
         except Exception:
@@ -968,10 +964,7 @@ Respond in JSON format:
         checkpoint = {
             "agent_name": self.name,
             "progress": self._current_progress,
-            "goal_states": {
-                g.id: g.status.value
-                for g in self.goals.get_all_goals()
-            },
+            "goal_states": {g.id: g.status.value for g in self.goals.get_all_goals()},
             "conversation_length": len(self._conversation_history),
             "wake_reason": self._wake_reason,
             "activation_state": self._activation_state.value,
@@ -995,7 +988,10 @@ Respond in JSON format:
             self._activation_state = AgentState.SLEEPING
 
         self._cancellation_requested = False
-        logger.info(f"Agent {self.name} restored from checkpoint (progress: {self._current_progress:.1%})")
+        logger.info(
+            f"Agent {self.name} restored from checkpoint "
+            f"(progress: {self._current_progress:.1%})"
+        )
 
     def on_preempted(self, reason: str) -> None:
         """
@@ -1013,8 +1009,7 @@ Respond in JSON format:
 
         # Publish preemption event
         self.publish_event(
-            "agent_preempted",
-            {"reason": reason, "checkpoint_created": True}
+            "agent_preempted", {"reason": reason, "checkpoint_created": True}
         )
 
     def on_resume(self, checkpoint: Dict[str, Any]) -> None:
@@ -1037,11 +1032,10 @@ Respond in JSON format:
     def set_preemption_callback(
         self,
         on_preempt: Optional[Callable[[str], None]] = None,
-        on_resume: Optional[Callable[[Dict], None]] = None
+        on_resume: Optional[Callable[[Dict], None]] = None,
     ) -> None:
         """Set callbacks for preemption events."""
         if on_preempt:
             self._on_preempt_callback = on_preempt
         if on_resume:
             self._on_resume_callback = on_resume
-

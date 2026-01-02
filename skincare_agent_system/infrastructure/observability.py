@@ -4,20 +4,19 @@ Uses OpenTelemetry-compatible interfaces for production deployment.
 """
 
 import logging
-import os
-import time
+import uuid
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from typing import Any, Callable, Dict, Generator, List, Optional
-import uuid
 
 logger = logging.getLogger("Observability")
 
 
 class SpanStatus(Enum):
     """Status of a trace span."""
+
     OK = "ok"
     ERROR = "error"
     TIMEOUT = "timeout"
@@ -26,6 +25,7 @@ class SpanStatus(Enum):
 @dataclass
 class SpanEvent:
     """Event within a span."""
+
     name: str
     timestamp: str
     attributes: Dict[str, Any] = field(default_factory=dict)
@@ -34,6 +34,7 @@ class SpanEvent:
 @dataclass
 class Span:
     """A single trace span."""
+
     span_id: str
     trace_id: str
     name: str
@@ -45,13 +46,19 @@ class Span:
     events: List[SpanEvent] = field(default_factory=list)
     duration_ms: float = 0.0
 
-    def add_event(self, name: str, attributes: Optional[Dict[str, Any]] = None) -> None:
+    def add_event(
+        self,
+        name: str,
+        attributes: Optional[Dict[str, Any]] = None,
+    ) -> None:
         """Add an event to the span."""
-        self.events.append(SpanEvent(
-            name=name,
-            timestamp=datetime.now().isoformat(),
-            attributes=attributes or {}
-        ))
+        self.events.append(
+            SpanEvent(
+                name=name,
+                timestamp=datetime.now().isoformat(),
+                attributes=attributes or {},
+            )
+        )
 
     def set_attribute(self, key: str, value: Any) -> None:
         """Set a span attribute."""
@@ -82,13 +89,14 @@ class Span:
             "events": [
                 {"name": e.name, "timestamp": e.timestamp, "attributes": e.attributes}
                 for e in self.events
-            ]
+            ],
         }
 
 
 @dataclass
 class Trace:
     """A complete trace with multiple spans."""
+
     trace_id: str
     root_span: Optional[Span] = None
     spans: List[Span] = field(default_factory=list)
@@ -114,13 +122,14 @@ class Trace:
             "created_at": self.created_at,
             "spans": [s.to_dict() for s in self.spans],
             "total_duration_ms": sum(s.duration_ms for s in self.spans),
-            "span_count": len(self.spans)
+            "span_count": len(self.spans),
         }
 
 
 @dataclass
 class MetricPoint:
     """A single metric data point."""
+
     name: str
     value: float
     timestamp: str
@@ -138,19 +147,25 @@ class MetricsCollector:
         self._gauges: Dict[str, float] = {}
         self._histograms: Dict[str, List[float]] = {}
 
-    def increment(self, name: str, value: float = 1.0, labels: Optional[Dict[str, str]] = None) -> None:
+    def increment(
+        self, name: str, value: float = 1.0, labels: Optional[Dict[str, str]] = None
+    ) -> None:
         """Increment a counter."""
         key = self._make_key(name, labels)
         self._counters[key] = self._counters.get(key, 0) + value
         self._record(name, self._counters[key], labels)
 
-    def gauge(self, name: str, value: float, labels: Optional[Dict[str, str]] = None) -> None:
+    def gauge(
+        self, name: str, value: float, labels: Optional[Dict[str, str]] = None
+    ) -> None:
         """Set a gauge value."""
         key = self._make_key(name, labels)
         self._gauges[key] = value
         self._record(name, value, labels)
 
-    def histogram(self, name: str, value: float, labels: Optional[Dict[str, str]] = None) -> None:
+    def histogram(
+        self, name: str, value: float, labels: Optional[Dict[str, str]] = None
+    ) -> None:
         """Record a histogram value."""
         key = self._make_key(name, labels)
         if key not in self._histograms:
@@ -165,18 +180,20 @@ class MetricsCollector:
         label_str = ",".join(f"{k}={v}" for k, v in sorted(labels.items()))
         return f"{name}{{{label_str}}}"
 
-    def _record(self, name: str, value: float, labels: Optional[Dict[str, str]]) -> None:
+    def _record(
+        self, name: str, value: float, labels: Optional[Dict[str, str]]
+    ) -> None:
         """Record a metric point."""
         point = MetricPoint(
             name=name,
             value=value,
             timestamp=datetime.now().isoformat(),
-            labels=labels or {}
+            labels=labels or {},
         )
         self._points.append(point)
 
         if len(self._points) > self._max_points:
-            self._points = self._points[-self._max_points:]
+            self._points = self._points[-self._max_points :]
 
     def get_counter(self, name: str, labels: Optional[Dict[str, str]] = None) -> float:
         """Get counter value."""
@@ -186,12 +203,22 @@ class MetricsCollector:
         """Get gauge value."""
         return self._gauges.get(self._make_key(name, labels), 0)
 
-    def get_histogram_stats(self, name: str, labels: Optional[Dict[str, str]] = None) -> Dict[str, float]:
+    def get_histogram_stats(
+        self, name: str, labels: Optional[Dict[str, str]] = None
+    ) -> Dict[str, float]:
         """Get histogram statistics."""
         key = self._make_key(name, labels)
         values = self._histograms.get(key, [])
         if not values:
-            return {"count": 0, "min": 0, "max": 0, "avg": 0, "p50": 0, "p95": 0, "p99": 0}
+            return {
+                "count": 0,
+                "min": 0,
+                "max": 0,
+                "avg": 0,
+                "p50": 0,
+                "p95": 0,
+                "p99": 0,
+            }
 
         sorted_vals = sorted(values)
         count = len(sorted_vals)
@@ -202,7 +229,7 @@ class MetricsCollector:
             "avg": sum(sorted_vals) / count,
             "p50": sorted_vals[int(count * 0.5)],
             "p95": sorted_vals[int(count * 0.95)] if count > 20 else sorted_vals[-1],
-            "p99": sorted_vals[int(count * 0.99)] if count > 100 else sorted_vals[-1]
+            "p99": sorted_vals[int(count * 0.99)] if count > 100 else sorted_vals[-1],
         }
 
 
@@ -242,7 +269,7 @@ class Tracer:
         self,
         name: str,
         parent_span_id: Optional[str] = None,
-        attributes: Optional[Dict[str, Any]] = None
+        attributes: Optional[Dict[str, Any]] = None,
     ) -> Span:
         """Start a new span in current trace."""
         if not self._current_trace_id:
@@ -259,7 +286,7 @@ class Tracer:
             trace_id=self._current_trace_id,
             name=name,
             parent_span_id=parent_span_id,
-            attributes=attributes or {"service": self._service_name}
+            attributes=attributes or {"service": self._service_name},
         )
 
         self._active_spans[span_id] = span
@@ -275,16 +302,12 @@ class Tracer:
 
             # Record duration metric
             self._metrics.histogram(
-                "span_duration_ms",
-                span.duration_ms,
-                {"name": span.name}
+                "span_duration_ms", span.duration_ms, {"name": span.name}
             )
 
     @contextmanager
     def span(
-        self,
-        name: str,
-        attributes: Optional[Dict[str, Any]] = None
+        self, name: str, attributes: Optional[Dict[str, Any]] = None
     ) -> Generator[Span, None, None]:
         """Context manager for spans."""
         span = self.start_span(name, attributes=attributes)
@@ -296,11 +319,9 @@ class Tracer:
             self.end_span(span.span_id, SpanStatus.ERROR)
             raise
 
-    def trace_function(
-        self,
-        name: Optional[str] = None
-    ) -> Callable:
+    def trace_function(self, name: Optional[str] = None) -> Callable:
         """Decorator to trace a function."""
+
         def decorator(func: Callable) -> Callable:
             span_name = name or func.__name__
 
@@ -317,6 +338,7 @@ class Tracer:
                     return result
 
             import asyncio
+
             if asyncio.iscoroutinefunction(func):
                 return async_wrapper
             return wrapper
@@ -334,20 +356,15 @@ class Tracer:
         return None
 
     def record_agent_execution(
-        self,
-        agent_name: str,
-        duration_ms: float,
-        success: bool
+        self, agent_name: str, duration_ms: float, success: bool
     ) -> None:
         """Record agent execution metrics."""
         self._metrics.increment(
             "agent_executions_total",
-            labels={"agent": agent_name, "success": str(success).lower()}
+            labels={"agent": agent_name, "success": str(success).lower()},
         )
         self._metrics.histogram(
-            "agent_execution_duration_ms",
-            duration_ms,
-            {"agent": agent_name}
+            "agent_execution_duration_ms", duration_ms, {"agent": agent_name}
         )
 
     def get_metrics(self) -> MetricsCollector:
@@ -369,7 +386,11 @@ class AnomalyDetector:
         self._error_history: Dict[str, List[bool]] = {}
         self._thresholds: Dict[str, float] = {}
 
-    def record_latency(self, agent_name: str, latency_ms: float) -> Optional[str]:
+    def record_latency(
+        self,
+        agent_name: str,
+        latency_ms: float,
+    ) -> Optional[str]:
         """Record latency and detect anomalies."""
         if agent_name not in self._latency_history:
             self._latency_history[agent_name] = []
