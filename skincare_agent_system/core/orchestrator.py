@@ -23,11 +23,13 @@ from skincare_agent_system.core.proposals import (
     ProposalSystem,
 )
 from skincare_agent_system.core.state_manager import StateManager
+from skincare_agent_system.infrastructure.logger import get_logger
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger("Coordinator")
+system_log = get_logger("Orchestrator")
 
 
 # Stub classes for missing dependencies
@@ -213,6 +215,7 @@ class Orchestrator(BaseAgent):
 
 
     def run(self, initial_product_data=None):
+        system_log.info("=== Starting workflow ===", extra={"type": "workflow_start"})
         logger.info(f"Starting {self.name}...")
         self.state_manager.start_workflow()
 
@@ -257,7 +260,14 @@ class Orchestrator(BaseAgent):
                 self.state = SystemState.COMPLETED
                 break
 
+            system_log.workflow_phase("execute", step_count)
             step_count += 1
+
+        system_log.info("=== Workflow completed ===", extra={
+            "type": "workflow_end",
+            "state": self.state.value,
+            "steps": step_count
+        })
 
         if step_count >= self.max_steps:
             logger.warning("Max steps reached. Stopping.")

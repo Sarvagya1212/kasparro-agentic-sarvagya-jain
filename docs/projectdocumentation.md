@@ -44,7 +44,31 @@ keeping implementation simple. We deliberately avoided:
 | Monitoring/tracing | ~250 | Not evaluated |
 | **Total Savings** | **~1000** | Unnecessary complexity |
 
+### Why Proposal-Based Orchestration?
+
+The proposal system is **NOT over-engineering**—it's core to agent autonomy:
+
+**Problem**: Traditional workflow graphs are rigid:
+- Fixed execution order (A → B → C)
+- Cannot adapt to failures dynamically
+- No agent decision-making capability
+
+**Solution**: Proposal-based coordination:
+- Agents assess context and decide if they can help
+- Orchestrator selects best agent dynamically
+- Natural failure recovery (failed agent replaced by next best)
+
+**Example**: If `ValidationWorker` fails, `DelegatorAgent` can propose `retry_analysis`
+instead of hardcoded retry logic. This is true autonomy, not just callbacks.
+
+| Metric | Value |
+|--------|-------|
+| Complexity Cost | ~200 LOC for proposal system |
+| Value Add | Eliminates ~500 LOC of hardcoded failure handlers |
+| Flexibility | Agents can propose new actions without code changes |
+
 ---
+
 
 ## Executive Summary
 
