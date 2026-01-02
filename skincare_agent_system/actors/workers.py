@@ -604,16 +604,22 @@ class ValidationWorker(BaseAgent):
                 priority=8
             )
 
-        # Normal proposal logic
-        has_data = context.analysis_results is not None
+        # Normal proposal logic - only propose if generation work is complete
+        has_benefits = (
+            context.analysis_results is not None 
+            and len(context.analysis_results.benefits) > 0
+        )
+        has_questions = len(context.generated_questions) >= self.MIN_FAQ_QUESTIONS
+        ready_for_validation = has_benefits and has_questions
         already_valid = context.is_valid
 
-        if not has_data:
+        if not ready_for_validation:
+            # Other workers need to run first
             return AgentProposal(
                 agent_name=self.name,
                 action="validate_results",
                 confidence=0.0,
-                reason="No analysis results to validate",
+                reason=f"Not ready: benefits={has_benefits}, questions={has_questions}",
                 preconditions_met=False,
                 priority=0
             )
@@ -631,9 +637,9 @@ class ValidationWorker(BaseAgent):
         return AgentProposal(
             agent_name=self.name,
             action="validate_results",
-            confidence=0.85,
-            reason="Analysis results available, validation needed",
+            confidence=0.95,
+            reason="Ready to validate: all generation work complete",
             preconditions_met=True,
-            priority=7
+            priority=9  # Highest priority once ready
         )
 

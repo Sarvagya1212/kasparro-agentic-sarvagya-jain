@@ -10,31 +10,13 @@
     "Pore refinement and oil control"
   ],
   "usage": "Follow product instructions for best results.",
-  "questions_count": 0,
-  "is_valid": false,
-  "validation_errors": [
-    "FAQ must have 15+ questions, found 0"
-  ],
+  "questions_count": 15,
+  "is_valid": true,
+  "validation_errors": [],
   "execution_history": [
     "Running BenefitsWorker",
     "Running UsageWorker",
-    "Running ValidationWorker",
-    "Running ValidationWorker",
-    "Running ValidationWorker",
-    "Running ValidationWorker",
-    "Running ValidationWorker",
-    "Running ValidationWorker",
-    "Running ValidationWorker",
-    "Running ValidationWorker",
-    "Running ValidationWorker",
-    "Running ValidationWorker",
-    "Running ValidationWorker",
-    "Running ValidationWorker",
-    "Running ValidationWorker",
-    "Running ValidationWorker",
-    "Running ValidationWorker",
-    "Running ValidationWorker",
-    "Running ValidationWorker",
+    "Running QuestionsWorker",
     "Running ValidationWorker"
   ]
 }
