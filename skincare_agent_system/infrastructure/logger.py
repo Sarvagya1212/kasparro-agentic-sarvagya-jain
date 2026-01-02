@@ -23,24 +23,26 @@ class StructuredLogger:
             # Console handler with human-readable formatting
             console_handler = logging.StreamHandler()
             console_formatter = logging.Formatter(
-                '%(asctime)s | %(levelname)-8s | %(name)s | %(message)s'
+                "%(asctime)s | %(levelname)-8s | %(name)s | %(message)s"
             )
             console_handler.setFormatter(console_formatter)
             self.logger.addHandler(console_handler)
 
             # File handler for JSON logs (if logs dir exists)
             if os.path.exists(log_dir):
-                file_handler = logging.FileHandler(f'{log_dir}/system.log')
+                file_handler = logging.FileHandler(f"{log_dir}/system.log")
                 self.logger.addHandler(file_handler)
 
-    def _build_log_entry(self, level: str, message: str, extra: Optional[Dict[str, Any]] = None) -> str:
+    def _build_log_entry(
+        self, level: str, message: str, extra: Optional[Dict[str, Any]] = None
+    ) -> str:
         """Build structured JSON log entry."""
         log_data = {
             "timestamp": datetime.utcnow().isoformat() + "Z",
             "level": level,
             "logger": self.name,
             "message": message,
-            **(extra or {})
+            **(extra or {}),
         }
         return json.dumps(log_data)
 
@@ -64,47 +66,54 @@ class StructuredLogger:
 
     def agent_action(self, agent_name: str, action: str, result: str):
         """Log agent action with context."""
-        self.info(f"Agent action: {agent_name}.{action}", extra={
-            "agent": agent_name,
-            "action": action,
-            "result": result,
-            "type": "agent_action"
-        })
+        self.info(
+            f"Agent action: {agent_name}.{action}",
+            extra={
+                "agent": agent_name,
+                "action": action,
+                "result": result,
+                "type": "agent_action",
+            },
+        )
 
     def proposal_collected(self, agent_name: str, confidence: float, action: str):
         """Log proposal collection."""
-        self.info(f"Proposal: {agent_name} -> {action}", extra={
-            "agent": agent_name,
-            "confidence": confidence,
-            "action": action,
-            "type": "proposal"
-        })
+        self.info(
+            f"Proposal: {agent_name} -> {action}",
+            extra={
+                "agent": agent_name,
+                "confidence": confidence,
+                "action": action,
+                "type": "proposal",
+            },
+        )
 
     def proposal_selected(self, agent_name: str, confidence: float, reason: str):
         """Log proposal selection."""
-        self.info(f"Selected: {agent_name} (confidence={confidence:.2f})", extra={
-            "agent": agent_name,
-            "confidence": confidence,
-            "reason": reason,
-            "type": "selection"
-        })
+        self.info(
+            f"Selected: {agent_name} (confidence={confidence:.2f})",
+            extra={
+                "agent": agent_name,
+                "confidence": confidence,
+                "reason": reason,
+                "type": "selection",
+            },
+        )
 
     def workflow_phase(self, phase: str, step: int):
         """Log workflow phase transition."""
-        self.info(f"Phase: {phase} (step {step})", extra={
-            "phase": phase,
-            "step": step,
-            "type": "workflow"
-        })
+        self.info(
+            f"Phase: {phase} (step {step})",
+            extra={"phase": phase, "step": step, "type": "workflow"},
+        )
 
     def validation_result(self, passed: bool, errors: int):
         """Log validation result."""
         status = "PASSED" if passed else "FAILED"
-        self.info(f"Validation: {status}", extra={
-            "passed": passed,
-            "error_count": errors,
-            "type": "validation"
-        })
+        self.info(
+            f"Validation: {status}",
+            extra={"passed": passed, "error_count": errors, "type": "validation"},
+        )
 
 
 # Global logger instance

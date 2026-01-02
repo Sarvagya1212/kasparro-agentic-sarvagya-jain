@@ -172,9 +172,9 @@ def generate_recommendation(
     Uses dynamic rule-based generation when LLM unavailable.
     """
     from ..infrastructure.providers import get_provider
-    
+
     provider = get_provider()
-    
+
     # Build prompt for LLM or context for rule-based
     prompt = f"""
 Compare these skincare products and recommend:
@@ -191,14 +191,14 @@ Product B: {product_b.get('name', 'Product B')}
 
 Provide a 2-3 sentence recommendation.
 """
-    
+
     try:
         result = provider.generate(prompt, temperature=0.5)
         if result and len(result) > 20:
             return result.strip()
     except Exception:
         pass
-    
+
     # Dynamic rule-based fallback (not static mock)
     return _generate_recommendation_rules(product_a, product_b)
 
@@ -213,30 +213,42 @@ def _generate_recommendation_rules(product_a: Dict, product_b: Dict) -> str:
     types_b = set(product_b.get("skin_types", []))
     ingredients_a = set(product_a.get("key_ingredients", []))
     ingredients_b = set(product_b.get("key_ingredients", []))
-    
+
     # Calculate specific metrics
     price_diff = abs(price_a - price_b)
-    price_savings = round((price_diff / max(price_a, price_b)) * 100) if max(price_a, price_b) > 0 else 0
-    
+    price_savings = (
+        round((price_diff / max(price_a, price_b)) * 100)
+        if max(price_a, price_b) > 0
+        else 0
+    )
+
     ingredient_overlap = len(ingredients_a & ingredients_b)
     total_ingredients = len(ingredients_a | ingredients_b)
-    overlap_pct = round(100 * ingredient_overlap / total_ingredients) if total_ingredients > 0 else 0
-    
+    overlap_pct = (
+        round(100 * ingredient_overlap / total_ingredients)
+        if total_ingredients > 0
+        else 0
+    )
+
     parts = []
-    
+
     # Price-based recommendation with specifics
     if price_a and price_b:
         if price_a < price_b:
-            parts.append(f"{name_a} offers {price_savings}% better value at ₹{price_a} vs ₹{price_b}")
+            parts.append(
+                f"{name_a} offers {price_savings}% better value at ₹{price_a} vs ₹{price_b}"
+            )
         else:
-            parts.append(f"{name_b} is {price_savings}% more affordable at ₹{price_b} vs ₹{price_a}")
-    
+            parts.append(
+                f"{name_b} is {price_savings}% more affordable at ₹{price_b} vs ₹{price_a}"
+            )
+
     # Ingredient analysis
     if overlap_pct > 70:
         parts.append(f"Both products share {overlap_pct}% of active ingredients")
     elif overlap_pct < 30:
         parts.append(f"Products have distinct formulations ({overlap_pct}% overlap)")
-    
+
     # Skin type recommendation
     if types_a and types_b:
         unique_a = types_a - types_b
@@ -245,8 +257,8 @@ def _generate_recommendation_rules(product_a: Dict, product_b: Dict) -> str:
             parts.append(f"{name_a} additionally suits {', '.join(unique_a)}")
         if unique_b:
             parts.append(f"{name_b} is better for {', '.join(unique_b)}")
-    
+
     if not parts:
         parts.append(f"Both {name_a} and {name_b} are comparable options")
-    
+
     return ". ".join(parts) + "."

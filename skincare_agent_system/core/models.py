@@ -9,11 +9,12 @@ from pydantic import BaseModel, Field, field_validator
 # --- Processing Stages (Blackboard Pattern) ---
 class ProcessingStage(str, Enum):
     """Stages of the content generation pipeline."""
-    INGEST = "INGEST"           # Raw data loaded
-    SYNTHESIS = "SYNTHESIS"      # Benefits/Usage extracted  
-    DRAFTING = "DRAFTING"        # FAQ/Content generated
-    VERIFICATION = "VERIFICATION" # Validation in progress
-    COMPLETE = "COMPLETE"        # All done
+
+    INGEST = "INGEST"  # Raw data loaded
+    SYNTHESIS = "SYNTHESIS"  # Benefits/Usage extracted
+    DRAFTING = "DRAFTING"  # FAQ/Content generated
+    VERIFICATION = "VERIFICATION"  # Validation in progress
+    COMPLETE = "COMPLETE"  # All done
 
 
 # --- Transition States ---
@@ -68,10 +69,10 @@ class ProductData(BaseModel):
     side_effects: Optional[str] = None
     usage_instructions: Optional[str] = None
 
-    @field_validator('skin_types')
+    @field_validator("skin_types")
     @classmethod
     def validate_skin_types(cls, v):
-        valid_types = ['Oily', 'Dry', 'Combination', 'Sensitive', 'Normal', 'All']
+        valid_types = ["Oily", "Dry", "Combination", "Sensitive", "Normal", "All"]
         for skin_type in v:
             if skin_type not in valid_types:
                 # Allow but warn - don't break for flexibility
@@ -104,12 +105,20 @@ class FAQQuestion(BaseModel):
     answer: str = Field(..., min_length=10)
     category: str = Field(default="General")
 
-    @field_validator('category')
+    @field_validator("category")
     @classmethod
     def validate_category(cls, v):
-        valid = ['Informational', 'Safety', 'Usage', 'Purchase', 'Comparison', 'Ingredients', 'General']
+        valid = [
+            "Informational",
+            "Safety",
+            "Usage",
+            "Purchase",
+            "Comparison",
+            "Ingredients",
+            "General",
+        ]
         if v not in valid:
-            return 'General'  # Default to General if invalid
+            return "General"  # Default to General if invalid
         return v
 
 
@@ -119,7 +128,7 @@ class FAQOutput(BaseModel):
     product_name: str
     questions: List[FAQQuestion] = Field(default_factory=list)
 
-    @field_validator('questions')
+    @field_validator("questions")
     @classmethod
     def validate_question_count(cls, v):
         if len(v) < 15:
@@ -150,11 +159,13 @@ class AgentContext(BaseModel):
         self.execution_history.append(step_name)
 
     def log_decision(self, agent_name: str, reason: str):
-        self.decision_log.append({
-            "timestamp": datetime.now().isoformat(),
-            "agent": agent_name,
-            "reason": reason,
-        })
+        self.decision_log.append(
+            {
+                "timestamp": datetime.now().isoformat(),
+                "agent": agent_name,
+                "reason": reason,
+            }
+        )
 
 
 class AgentResult(BaseModel):
@@ -165,10 +176,10 @@ class AgentResult(BaseModel):
     context: "GlobalContext"  # Forward reference
     message: str = ""
 
-    @field_validator('message')
+    @field_validator("message")
     @classmethod
     def validate_error_message(cls, v, info):
-        if info.data.get('status') == AgentStatus.ERROR and not v:
+        if info.data.get("status") == AgentStatus.ERROR and not v:
             return "Unknown error"
         return v
 
@@ -176,6 +187,7 @@ class AgentResult(BaseModel):
 # --- Unified Schema (Blackboard Pattern) ---
 class ContentSchema(BaseModel):
     """Generated content artifacts - all outputs in one place."""
+
     usage: str = ""
     faq_questions: List[Tuple[str, str, str]] = Field(default_factory=list)
     comparison: Dict[str, Any] = Field(default_factory=dict)
@@ -186,39 +198,38 @@ class GlobalContext(BaseModel):
     The Blackboard - single source of truth for all agents.
     Immutable input + mutable artifacts + validation state + reflexion.
     """
-    
+
     # Processing stage
     stage: ProcessingStage = ProcessingStage.INGEST
-    
+
     # Immutable inputs (set once at start)
     product_input: Optional[ProductData] = None
     comparison_input: Optional[ProductData] = None
-    
+
     # Generated content (artifacts)
     generated_content: ContentSchema = Field(default_factory=ContentSchema)
-    
+
     # Validation state
     errors: List[str] = Field(default_factory=list)
     is_valid: bool = False
-    
+
     # Reflexion (self-correction)
     reflexion_feedback: str = ""  # Error feedback for retry
     retry_count: int = 0
-    
+
     # Metadata
     trace_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     created_at: str = Field(default_factory=lambda: datetime.now().isoformat())
     execution_history: List[str] = Field(default_factory=list)
-    
+
     def log_step(self, step_name: str):
         self.execution_history.append(step_name)
-    
+
     def advance_stage(self, new_stage: ProcessingStage):
         """Move to next processing stage."""
         self.stage = new_stage
-    
+
     def set_reflexion(self, feedback: str):
         """Set reflexion feedback for retry."""
         self.reflexion_feedback = feedback
         self.retry_count += 1
-

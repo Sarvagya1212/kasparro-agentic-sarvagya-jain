@@ -15,7 +15,7 @@ class FAQTemplate(ContentTemplate):
     def __init__(self):
         template_dir = os.path.dirname(os.path.abspath(__file__))
         self.env = Environment(loader=FileSystemLoader(template_dir))
-        self.template = self.env.get_template('faq.j2')
+        self.template = self.env.get_template("faq.j2")
 
     def render(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -35,18 +35,15 @@ class FAQTemplate(ContentTemplate):
         # Build FAQ list with categories
         faqs = []
         for question, answer, category in data["qa_pairs"]:
-            faqs.append({
-                "question": question,
-                "answer": answer,
-                "category": category
-            })
+            faqs.append({"question": question, "answer": answer, "category": category})
 
         # Render using Jinja2
         import json
+
         rendered = self.template.render(
             product=data["product_name"],
             faqs=faqs,
-            generated_at=data.get("timestamp", "")
+            generated_at=data.get("timestamp", ""),
         )
-        
+
         return json.loads(rendered)

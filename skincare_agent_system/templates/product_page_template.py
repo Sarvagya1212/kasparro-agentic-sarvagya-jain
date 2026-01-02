@@ -16,7 +16,7 @@ class ProductPageTemplate(ContentTemplate):
     def __init__(self):
         template_dir = os.path.dirname(os.path.abspath(__file__))
         self.env = Environment(loader=FileSystemLoader(template_dir))
-        self.template = self.env.get_template('product_page.j2')
+        self.template = self.env.get_template("product_page.j2")
 
     def render(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -48,13 +48,13 @@ class ProductPageTemplate(ContentTemplate):
             "currency": data.get("currency", "INR"),
             "size": data.get("size", ""),
             "skin_types": data.get("skin_types", []),
-            "side_effects": data.get("side_effects", "")
+            "side_effects": data.get("side_effects", ""),
         }
 
         rendered = self.template.render(
             product=product,
             usage_instructions=data.get("usage_instructions", ""),
-            concerns=data.get("concerns", [])
+            concerns=data.get("concerns", []),
         )
-        
+
         return json.loads(rendered)

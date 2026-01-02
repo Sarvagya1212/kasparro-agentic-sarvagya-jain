@@ -11,16 +11,19 @@ from pydantic import BaseModel, ValidationError
 logger = logging.getLogger("Validators")
 
 
-def validate_schema(input_model: Type[BaseModel] = None, output_model: Type[BaseModel] = None):
+def validate_schema(
+    input_model: Type[BaseModel] = None, output_model: Type[BaseModel] = None
+):
     """
     Decorator that validates input/output at tool boundaries.
     Throws structured error immediately if schema validation fails.
-    
+
     Usage:
         @validate_schema(input_model=ProductData, output_model=ContentSchema)
         def my_tool(data: ProductData) -> ContentSchema:
             ...
     """
+
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
@@ -41,10 +44,10 @@ def validate_schema(input_model: Type[BaseModel] = None, output_model: Type[Base
                     except ValidationError as e:
                         logger.error(f"Input validation failed: {e}")
                         raise ValueError(f"Schema validation failed: {e}") from e
-            
+
             # Execute function
             result = func(*args, **kwargs)
-            
+
             # Validate output if output_model specified
             if output_model and result is not None:
                 if not isinstance(result, output_model):
@@ -59,9 +62,11 @@ def validate_schema(input_model: Type[BaseModel] = None, output_model: Type[Base
                     except ValidationError as e:
                         logger.error(f"Output validation failed: {e}")
                         raise ValueError(f"Output schema validation failed: {e}") from e
-            
+
             return result
+
         return wrapper
+
     return decorator
 
 
@@ -69,14 +74,16 @@ def validate_context(func):
     """
     Simpler decorator - just validates that GlobalContext is passed.
     """
+
     @functools.wraps(func)
     def wrapper(self, context, *args, **kwargs):
         from skincare_agent_system.core.models import GlobalContext
-        
+
         if not isinstance(context, GlobalContext):
             raise TypeError(
                 f"Expected GlobalContext, got {type(context).__name__}. "
                 f"All agents must receive GlobalContext."
             )
         return func(self, context, *args, **kwargs)
+
     return wrapper
