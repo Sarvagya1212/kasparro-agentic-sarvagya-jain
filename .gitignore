@@ -40,3 +40,15 @@ Thumbs.db
 
 # Project specific
 *.log
+
+# Environment files (NEVER commit secrets!)
+.env
+.env.local
+.env.*.local
+
+# Debug/temp files
+debug.log
+errors.txt
+errors_detailed.txt
+debug_import.py
+refactor_script.py
