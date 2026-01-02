@@ -12,8 +12,11 @@ def generate_questions_by_category(
     product_data: Dict[str, Any], min_questions: int = 15
 ) -> List[Tuple[str, str, str]]:
     """
-    Generate categorized questions and answers using provider abstraction.
-    Uses MistralProvider if available, falls back to OfflineRuleProvider.
+    FAQ Question Generation using LLM provider.
+
+    This module generates questions for FAQ content.
+    Uses MistralProvider for question generation.
+    Falls back to provider's default if LLM fails.
     """
     from ..infrastructure.providers import get_provider
 
