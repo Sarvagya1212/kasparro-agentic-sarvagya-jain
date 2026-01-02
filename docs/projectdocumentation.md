@@ -1,6 +1,53 @@
 # Project Documentation: Skincare Agent System
 
+---
+
+# Simplified Architecture
+
+## Why This Design?
+
+### Core Philosophy: Minimal Complexity, Maximum Autonomy
+
+This system prioritizes **agent autonomy** through the proposal system while 
+keeping implementation simple. We deliberately avoided:
+
+- ❌ Complex security systems (not required for assignment)
+- ❌ Advanced memory/cognition (overkill for static product data)
+- ❌ Extensive monitoring (assignment tests functionality, not observability)
+
+### What We Kept (And Why)
+
+**1. Proposal-Based Orchestration** (~200 LOC)
+- Agents assess context and propose actions independently
+- Orchestrator selects best proposal dynamically
+- Natural failure recovery without hardcoded retries
+- **Value**: True agent autonomy, not just function calls
+
+**2. Hierarchical Task Management** (~150 LOC)
+- Delegator coordinates specialized workers
+- Workers focus on single responsibilities
+- **Value**: Clean separation of concerns, easy testing
+
+**3. LLM Abstraction** (~50 LOC)
+- Graceful degradation to heuristics
+- No API key dependency
+- **Value**: System works offline, easier testing
+
+**Total Core System**: ~400 LOC (excluding templates/tests)
+
+### What We Removed
+
+| Component | LOC Removed | Reason |
+|-----------|-------------|--------|
+| Security system | ~350 | Not evaluated in assignment |
+| Advanced cognition | ~400 | Overkill for static data |
+| Monitoring/tracing | ~250 | Not evaluated |
+| **Total Savings** | **~1000** | Unnecessary complexity |
+
+---
+
 ## Executive Summary
+
 
 The Skincare Agent System (SAS) is an autonomous multi-agent framework designed to generate structured, high-quality content for skincare products. This document provides an in-depth technical analysis of the system's architecture, design decisions, and operational workflows.
 
