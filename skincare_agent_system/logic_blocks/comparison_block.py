@@ -164,11 +164,20 @@ def extract_concentration_value(concentration_str: str) -> float:
     return float(match.group(1)) if match else 0.0
 
 
+def get_llm_client():
+    """Get LLM client for content generation."""
+    try:
+        from ..infrastructure.llm_client import LLMClient
+        return LLMClient()
+    except Exception:
+        return None
+
+
 def generate_recommendation(
     product_a: Dict[str, Any], product_b: Dict[str, Any]
 ) -> str:
     """
-    Generate overall recommendation based on comparison.
+    Generate overall recommendation using LLM.
 
     Args:
         product_a: First product data
@@ -177,6 +186,49 @@ def generate_recommendation(
     Returns:
         Recommendation text
     """
+    llm = get_llm_client()
+    
+    if llm:
+        try:
+            return _generate_recommendation_llm(llm, product_a, product_b)
+        except Exception as e:
+            import logging
+            logging.getLogger("ComparisonBlock").warning(f"LLM recommendation failed: {e}")
+    
+    # Fallback
+    return _generate_recommendation_heuristic(product_a, product_b)
+
+
+def _generate_recommendation_llm(llm, product_a: Dict, product_b: Dict) -> str:
+    """Use LLM to generate intelligent recommendation."""
+    prompt = f"""
+You are a skincare expert. Compare these two products and provide a recommendation.
+
+Product A: {product_a.get('name', 'Product A')}
+- Price: ₹{product_a.get('price', 0)}
+- Ingredients: {', '.join(product_a.get('key_ingredients', []))}
+- Benefits: {', '.join(product_a.get('benefits', []))}
+- Best for: {', '.join(product_a.get('skin_types', []))}
+
+Product B: {product_b.get('name', 'Product B')}
+- Price: ₹{product_b.get('price', 0)}
+- Ingredients: {', '.join(product_b.get('key_ingredients', []))}
+- Benefits: {', '.join(product_b.get('benefits', []))}
+- Best for: {', '.join(product_b.get('skin_types', []))}
+
+Write a 2-3 sentence recommendation comparing both products. Be specific about who each product is best for.
+Return ONLY the recommendation text, no quotes.
+"""
+    
+    response = llm.generate(prompt, temperature=0.5)
+    if response and len(response) > 20:
+        return response.strip().strip('"')
+    
+    raise ValueError("LLM returned empty response")
+
+
+def _generate_recommendation_heuristic(product_a: Dict, product_b: Dict) -> str:
+    """Fallback heuristic recommendation."""
     name_a = product_a.get("name", "Product A")
     name_b = product_b.get("name", "Product B")
 
@@ -193,3 +245,4 @@ def generate_recommendation(
             f"{name_a} is the premium option with comprehensive benefits, "
             f"while {name_b} offers great value for those on a budget."
         )
+

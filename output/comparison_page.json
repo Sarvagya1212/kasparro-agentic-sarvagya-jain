@@ -1,0 +1,56 @@
+{
+  "comparison_type": "side_by_side",
+  "primary_product": "GlowBoost Vitamin C Serum",
+  "comparison_with": "RadiantGlow Vitamin C Cream",
+  "comparison_table": [
+    {
+      "attribute": "Product Name",
+      "product_a": "GlowBoost Vitamin C Serum",
+      "product_b": "RadiantGlow Vitamin C Cream"
+    },
+    {
+      "attribute": "Price",
+      "product_a": "\u20b9699.0",
+      "product_b": "\u20b9899.0"
+    },
+    {
+      "attribute": "Key Ingredients",
+      "product_a": "Vitamin C, Hyaluronic Acid",
+      "product_b": "Vitamin C, Ferulic Acid, Vitamin E"
+    },
+    {
+      "attribute": "Skin Types",
+      "product_a": "Oily, Combination",
+      "product_b": "Normal, Dry, Combination"
+    },
+    {
+      "attribute": "Benefits",
+      "product_a": "Brightening, Fades dark spots",
+      "product_b": "Brightening, Antioxidant protection, Fine line reduction"
+    }
+  ],
+  "differences": [
+    {
+      "aspect": "Price",
+      "winner": "GlowBoost",
+      "reason": "\u20b9200 cheaper"
+    },
+    {
+      "aspect": "Ingredients",
+      "winner": "RadiantGlow",
+      "reason": "More antioxidants"
+    },
+    {
+      "aspect": "Skin types",
+      "winner": "RadiantGlow",
+      "reason": "Wider compatibility"
+    }
+  ],
+  "recommendation": "Analyze product benefits from ingredient data",
+  "winner_categories": {
+    "best_value": "GlowBoost Vitamin C Serum",
+    "most_comprehensive": "RadiantGlow Vitamin C Cream",
+    "most_benefits": "RadiantGlow Vitamin C Cream",
+    "higher_concentration": "RadiantGlow Vitamin C Cream"
+  }
+}
