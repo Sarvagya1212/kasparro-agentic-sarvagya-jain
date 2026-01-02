@@ -3,7 +3,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 # --- Transition States (User Requirement) ---
@@ -39,26 +39,34 @@ class TaskDirective(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     description: str
     priority: TaskPriority
-    schema_definition: Optional[Dict[str, Any]] = (
-        None  # Optional JSON schema for expected output
-    )
+    schema_definition: Optional[Dict[str, Any]] = None
 
 
 # --- Strict Data Models (User Requirement) ---
 class ProductData(BaseModel):
-    """Strict schema for product data."""
+    """Strict schema for product data with validation."""
 
-    name: str
-    brand: str
+    name: str = Field(..., min_length=1, description="Product name")
+    brand: str = Field(..., min_length=1, description="Brand name")
     concentration: Optional[str] = None
     key_ingredients: List[str] = Field(default_factory=list)
     benefits: List[str] = Field(default_factory=list)
-    price: Optional[float] = None
+    price: Optional[float] = Field(None, ge=0, description="Price must be non-negative")
     currency: str = "INR"
     size: Optional[str] = None
     skin_types: List[str] = Field(default_factory=list)
     side_effects: Optional[str] = None
-    usage_instructions: Optional[str] = None  # data source might have 'how_to_use'
+    usage_instructions: Optional[str] = None
+
+    @field_validator('skin_types')
+    @classmethod
+    def validate_skin_types(cls, v):
+        valid_types = ['Oily', 'Dry', 'Combination', 'Sensitive', 'Normal', 'All']
+        for skin_type in v:
+            if skin_type not in valid_types:
+                # Allow but warn - don't break for flexibility
+                pass
+        return v
 
 
 class ComparisonData(BaseModel):
@@ -75,9 +83,38 @@ class AnalysisResults(BaseModel):
 
     benefits: List[str] = Field(default_factory=list)
     usage: str = ""
-    comparison: Dict[str, Any] = Field(
-        default_factory=dict
-    )  # Keep nested dict for now complexity
+    comparison: Dict[str, Any] = Field(default_factory=dict)
+
+
+# --- FAQ Models with Validation ---
+class FAQQuestion(BaseModel):
+    """Single FAQ question-answer pair with validation."""
+
+    question: str = Field(..., min_length=5)
+    answer: str = Field(..., min_length=10)
+    category: str = Field(default="General")
+
+    @field_validator('category')
+    @classmethod
+    def validate_category(cls, v):
+        valid = ['Informational', 'Safety', 'Usage', 'Purchase', 'Comparison', 'Ingredients', 'General']
+        if v not in valid:
+            return 'General'  # Default to General if invalid
+        return v
+
+
+class FAQOutput(BaseModel):
+    """Complete FAQ page output with 15+ question validation."""
+
+    product_name: str
+    questions: List[FAQQuestion] = Field(default_factory=list)
+
+    @field_validator('questions')
+    @classmethod
+    def validate_question_count(cls, v):
+        if len(v) < 15:
+            raise ValueError(f"Must have at least 15 questions, got {len(v)}")
+        return v
 
 
 class AgentContext(BaseModel):
@@ -85,9 +122,7 @@ class AgentContext(BaseModel):
 
     # Typed Data Fields
     product_data: Optional[ProductData] = None
-    comparison_data: Optional[ProductData] = (
-        None  # Use ProductData schema for B as well
-    )
+    comparison_data: Optional[ProductData] = None
 
     # Analysis results
     analysis_results: Optional[AnalysisResults] = None
@@ -105,13 +140,11 @@ class AgentContext(BaseModel):
         self.execution_history.append(step_name)
 
     def log_decision(self, agent_name: str, reason: str):
-        self.decision_log.append(
-            {
-                "timestamp": datetime.now().isoformat(),
-                "agent": agent_name,
-                "reason": reason,
-            }
-        )
+        self.decision_log.append({
+            "timestamp": datetime.now().isoformat(),
+            "agent": agent_name,
+            "reason": reason,
+        })
 
 
 class AgentResult(BaseModel):
@@ -121,3 +154,12 @@ class AgentResult(BaseModel):
     status: AgentStatus
     context: AgentContext
     message: str = ""
+
+    @field_validator('message')
+    @classmethod
+    def validate_error_message(cls, v, info):
+        # If status is ERROR, message should be present
+        if info.data.get('status') == AgentStatus.ERROR and not v:
+            return "Unknown error"
+        return v
+

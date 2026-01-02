@@ -148,12 +148,13 @@ class Orchestrator(BaseAgent):
         Execute an agent with robust error handling.
         Catches exceptions and returns proper AgentResult on failure.
         """
+        import traceback
         from skincare_agent_system.core.models import AgentResult
 
         try:
             agent = self.agents.get(agent_name)
             if not agent:
-                logger.error(f"Agent {agent_name} not found")
+                logger.error(f"✗ Agent {agent_name} not found")
                 return AgentResult(
                     agent_name=agent_name,
                     status=AgentStatus.ERROR,
@@ -163,19 +164,53 @@ class Orchestrator(BaseAgent):
 
             result = agent.run(self.context, directive)
 
+            # Validate result type
+            if not isinstance(result, AgentResult):
+                logger.error(f"✗ Agent {agent_name} returned invalid type: {type(result)}")
+                return AgentResult(
+                    agent_name=agent_name,
+                    status=AgentStatus.ERROR,
+                    context=self.context,
+                    message=f"Invalid result type: {type(result)}"
+                )
+
             if result.status == AgentStatus.ERROR:
-                logger.error(f"Agent {agent_name} failed: {result.message}")
+                logger.error(f"✗ Agent {agent_name} failed: {result.message}")
+            else:
+                logger.info(f"✓ {agent_name} executed successfully")
 
             return result
 
         except Exception as e:
-            logger.error(f"Execution error in {agent_name}: {e}")
+            logger.error(f"✗ Execution error in {agent_name}: {e}\n{traceback.format_exc()}")
             return AgentResult(
                 agent_name=agent_name,
                 status=AgentStatus.ERROR,
                 context=self.context,
                 message=str(e)
             )
+
+    def execute_with_retry(self, agent_name: str, directive: TaskDirective, max_retries: int = 3):
+        """
+        Execute proposal with exponential backoff retry.
+        """
+        import time
+        from skincare_agent_system.core.models import AgentResult
+
+        for attempt in range(max_retries):
+            result = self.execute_proposal(agent_name, directive)
+
+            if result.status != AgentStatus.ERROR:
+                return result
+
+            if attempt < max_retries - 1:
+                wait_time = 2 ** attempt  # Exponential backoff: 1s, 2s, 4s
+                logger.warning(f"Retry {attempt + 1}/{max_retries} for {agent_name} in {wait_time}s")
+                time.sleep(wait_time)
+
+        logger.error(f"Agent {agent_name} failed after {max_retries} retries")
+        return result
+
 
     def run(self, initial_product_data=None):
         logger.info(f"Starting {self.name}...")
