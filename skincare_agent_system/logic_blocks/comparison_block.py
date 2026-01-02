@@ -241,7 +241,7 @@ def _generate_recommendation_rules(product_a: Dict, product_b: Dict) -> str:
             )
         else:
             parts.append(
-                f"{name_b} is {price_savings}% more affordable at ₹{price_b} vs ₹{price_a}"
+                f"{name_b} is {price_savings}% more affordable at ₹{price_b} vs ₹{price_a}"  # noqa: E501
             )
 
     # Ingredient analysis
