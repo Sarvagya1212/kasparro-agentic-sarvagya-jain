@@ -81,6 +81,11 @@ class QuestionsWorker:
         )
 
     def run(self, context: GlobalContext, directive: Optional[TaskDirective] = None) -> AgentResult:
+        # Check for reflexion feedback (self-correction)
+        if context.reflexion_feedback:
+            logger.info(f"{self.name}: Reflexion retry - {context.reflexion_feedback}")
+            context.reflexion_feedback = ""  # Clear after use
+        
         logger.info(f"{self.name}: Generating {self.FAQ_BUFFER} questions...")
         try:
             product_dict = context.product_input.model_dump()

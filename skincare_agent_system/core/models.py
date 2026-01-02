@@ -184,7 +184,7 @@ class ContentSchema(BaseModel):
 class GlobalContext(BaseModel):
     """
     The Blackboard - single source of truth for all agents.
-    Immutable input + mutable artifacts + validation state.
+    Immutable input + mutable artifacts + validation state + reflexion.
     """
     
     # Processing stage
@@ -201,6 +201,10 @@ class GlobalContext(BaseModel):
     errors: List[str] = Field(default_factory=list)
     is_valid: bool = False
     
+    # Reflexion (self-correction)
+    reflexion_feedback: str = ""  # Error feedback for retry
+    retry_count: int = 0
+    
     # Metadata
     trace_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     created_at: str = Field(default_factory=lambda: datetime.now().isoformat())
@@ -212,3 +216,9 @@ class GlobalContext(BaseModel):
     def advance_stage(self, new_stage: ProcessingStage):
         """Move to next processing stage."""
         self.stage = new_stage
+    
+    def set_reflexion(self, feedback: str):
+        """Set reflexion feedback for retry."""
+        self.reflexion_feedback = feedback
+        self.retry_count += 1
+
