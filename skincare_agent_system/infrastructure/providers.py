@@ -325,8 +325,8 @@ class OfflineRuleProvider(IIntelligenceProvider):
                 "Results"
             ))
         
-        # Ensure minimum 15 questions
-        while len(questions) < 15:
+        # Ensure minimum 20 questions (buffer for 15 threshold)
+        while len(questions) < 20:
             idx = len(questions) + 1
             questions.append((
                 f"Question {idx} about {name}?",
@@ -334,7 +334,7 @@ class OfflineRuleProvider(IIntelligenceProvider):
                 "General"
             ))
         
-        return questions[:15]
+        return questions[:20]
     
     def _get_ingredient_benefit(self, ingredient: str) -> str:
         """Get benefit description for ingredient using pattern matching."""

@@ -1,6 +1,6 @@
 {
   "product": "GlowBoost Vitamin C Serum",
-  "total_questions": 15,
+  "total_questions": 20,
   "faqs": [
     {
       "id": 1,
@@ -76,7 +76,32 @@
       "id": 15,
       "question": "Question 15 about GlowBoost Vitamin C Serum?",
       "answer": "This relates to GlowBoost Vitamin C Serum's formulation and benefits."
+    },
+    {
+      "id": 16,
+      "question": "Question 16 about GlowBoost Vitamin C Serum?",
+      "answer": "This relates to GlowBoost Vitamin C Serum's formulation and benefits."
+    },
+    {
+      "id": 17,
+      "question": "Question 17 about GlowBoost Vitamin C Serum?",
+      "answer": "This relates to GlowBoost Vitamin C Serum's formulation and benefits."
+    },
+    {
+      "id": 18,
+      "question": "Question 18 about GlowBoost Vitamin C Serum?",
+      "answer": "This relates to GlowBoost Vitamin C Serum's formulation and benefits."
+    },
+    {
+      "id": 19,
+      "question": "Question 19 about GlowBoost Vitamin C Serum?",
+      "answer": "This relates to GlowBoost Vitamin C Serum's formulation and benefits."
+    },
+    {
+      "id": 20,
+      "question": "Question 20 about GlowBoost Vitamin C Serum?",
+      "answer": "This relates to GlowBoost Vitamin C Serum's formulation and benefits."
     }
   ],
-  "generated_at": "2026-01-02T21:13:38.502954"
+  "generated_at": "2026-01-02T21:21:37.005691"
 }
