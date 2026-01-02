@@ -252,7 +252,8 @@ class OfflineRuleProvider(IIntelligenceProvider):
         questions.append(
             (
                 f"What is {name}?",
-                f"{name} is a skincare product containing {', '.join(ingredients) if ingredients else 'active ingredients'}.",
+                f"{name} is a skincare product containing "
+                f"{', '.join(ingredients) if ingredients else 'active ingredients'}.",
                 "Informational",
             )
         )
@@ -353,9 +354,14 @@ class OfflineRuleProvider(IIntelligenceProvider):
         # Texture/Application
         questions.append(
             (
-                f"What is the texture of {name}?",
-                f"{name} has a lightweight, fast-absorbing texture suitable for daily use.",
-                "Usage",
+                (
+                    f"What is the texture of {name}?",
+                    (
+                        f"{name} has a lightweight, fast-absorbing texture "
+                        "suitable for daily use."
+                    ),
+                    "Usage",
+                )
             )
         )
 
@@ -364,7 +370,8 @@ class OfflineRuleProvider(IIntelligenceProvider):
             questions.append(
                 (
                     f"Can I use {name} with retinol?",
-                    f"Consult with a dermatologist before combining {name} with retinol or other active ingredients.",
+                    f"Consult with a dermatologist before combining {name} with "
+                    "retinol or other active ingredients.",
                     "Safety",
                 )
             )
@@ -372,27 +379,36 @@ class OfflineRuleProvider(IIntelligenceProvider):
         # Storage
         questions.append(
             (
-                f"How should I store {name}?",
-                f"Store {name} in a cool, dry place away from direct sunlight to maintain efficacy.",
-                "Usage",
+                (
+                    f"How should I store {name}?",
+                    f"Store {name} in a cool, dry place away from direct sunlight to "
+                    "maintain efficacy.",
+                    "Usage",
+                )
             )
         )
 
         # Pregnancy/specific conditions
         questions.append(
             (
-                f"Can I use {name} during pregnancy?",
-                f"Consult your healthcare provider before using {name} during pregnancy or breastfeeding.",
-                "Safety",
+                (
+                    f"Can I use {name} during pregnancy?",
+                    f"Consult your healthcare provider before using {name} during "
+                    "pregnancy or breastfeeding.",
+                    "Safety",
+                )
             )
         )
 
         # Results timeline specific
         questions.append(
             (
-                f"How often should I use {name}?",
-                f"For best results, use {name} consistently as directed in the usage instructions.",
-                "Usage",
+                (
+                    f"How often should I use {name}?",
+                    f"For best results, use {name} consistently as directed in the "
+                    "usage instructions.",
+                    "Usage",
+                )
             )
         )
 
@@ -401,7 +417,8 @@ class OfflineRuleProvider(IIntelligenceProvider):
             questions.append(
                 (
                     f"How long does one bottle of {name} last?",
-                    f"With typical use (2-3 drops daily), one bottle of {name} lasts approximately 2-3 months.",
+                    f"With typical use (2-3 drops daily), one bottle of {name} lasts "
+                    "approximately 2-3 months.",
                     "Purchase",
                 )
             )
@@ -421,7 +438,7 @@ class OfflineRuleProvider(IIntelligenceProvider):
                 "Hyaluronic Acid provides deep hydration " "and plumps the skin."
             ),
             "retinol": "Retinol promotes cell turnover and reduces fine lines.",
-            "niacinamide": "Niacinamide minimizes pores and controls oil production.",
+            "niacinamide": ("Niacinamide minimizes pores and controls oil production."),
             "salicylic": "Salicylic Acid unclogs pores and treats acne.",
             "glycolic": "Glycolic Acid exfoliates for smoother, brighter skin.",
             "ferulic": "Ferulic Acid enhances antioxidant stability and protection.",
