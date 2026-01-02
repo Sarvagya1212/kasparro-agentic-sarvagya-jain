@@ -23,6 +23,13 @@ from skincare_agent_system.core.proposals import (
     ProposalSystem,
 )
 from skincare_agent_system.core.state_manager import StateManager
+from skincare_agent_system.core.event_system import (
+    ReactiveEventBus,
+    get_event_bus,
+    publish_event,
+    EventType as ReactiveEventType,
+)
+from skincare_agent_system.infrastructure.logger import get_logger
 from skincare_agent_system.infrastructure.logger import get_logger
 
 logging.basicConfig(
@@ -74,9 +81,11 @@ class Orchestrator(BaseAgent):
         self.memory = MockMemory()  # Stub
         self.proposal_system = ProposalSystem()
         self.event_bus = EventBus()
+        self.reactive_bus = get_event_bus()  # Reactive event bus
         self.goal_manager = GoalManager()
 
         self._active_coalition = None
+        self._pending_reproposals: List[str] = []  # Agents requesting re-proposal
         self._initialize_default_goals()
 
     def _estimate_task_complexity(self) -> float:
@@ -229,6 +238,13 @@ class Orchestrator(BaseAgent):
                     self.context.log_decision(
                         "System", "Initial product data loaded safely"
                     )
+                    # Publish data loaded event
+                    reproposals = publish_event(
+                        ReactiveEventType.DATA_LOADED,
+                        self.name,
+                        {"product_name": self.context.product_data.name}
+                    )
+                    self._pending_reproposals.extend(reproposals)
             except Exception as e:
                 logger.error(f"Failed to load initial data: {e}")
 
@@ -238,7 +254,8 @@ class Orchestrator(BaseAgent):
         )
 
         while step_count < self.max_steps:
-            next_agent_name = self.determine_next_agent()
+            # Collect proposals including reactive ones
+            next_agent_name = self._determine_next_agent_with_reactive()
             if not next_agent_name:
                 logger.info("No proposals. Workflow complete.")
                 self.state = SystemState.COMPLETED
@@ -250,6 +267,10 @@ class Orchestrator(BaseAgent):
             result = self.execute_proposal(next_agent_name, root_directive)
             self.context = result.context
             self._last_status = result.status
+
+            # Publish completion event and collect re-proposals
+            reproposals = self._publish_result_event(result, next_agent_name)
+            self._pending_reproposals.extend(reproposals)
 
             if result.status == AgentStatus.ERROR:
                 self.state = SystemState.ERROR
@@ -263,6 +284,13 @@ class Orchestrator(BaseAgent):
             system_log.workflow_phase("execute", step_count)
             step_count += 1
 
+        # Publish workflow completed event
+        publish_event(
+            ReactiveEventType.WORKFLOW_COMPLETED,
+            self.name,
+            {"steps": step_count, "state": self.state.value}
+        )
+
         system_log.info("=== Workflow completed ===", extra={
             "type": "workflow_end",
             "state": self.state.value,
@@ -274,3 +302,42 @@ class Orchestrator(BaseAgent):
             self.state = SystemState.ERROR
 
         return self.context
+
+    def _determine_next_agent_with_reactive(self) -> Optional[str]:
+        """Determine next agent, prioritizing reactive re-proposals."""
+        # Check for reactive re-proposals first
+        if self._pending_reproposals:
+            agent_name = self._pending_reproposals.pop(0)
+            logger.info(f"⚡ Reactive re-proposal from {agent_name}")
+            return agent_name
+
+        # Fall back to normal proposal selection
+        return self.determine_next_agent()
+
+    def _publish_result_event(self, result, agent_name: str) -> List[str]:
+        """Publish event based on result and collect re-proposals."""
+        event_type = None
+        event_data = {"agent": agent_name, "status": result.status.value}
+
+        # Map result to event type
+        if "benefits" in agent_name.lower():
+            event_type = ReactiveEventType.BENEFITS_EXTRACTED
+        elif "usage" in agent_name.lower():
+            event_type = ReactiveEventType.USAGE_EXTRACTED
+        elif "question" in agent_name.lower():
+            event_type = ReactiveEventType.QUESTIONS_GENERATED
+        elif "comparison" in agent_name.lower():
+            event_type = ReactiveEventType.COMPARISON_COMPLETE
+        elif "validation" in agent_name.lower():
+            if result.status == AgentStatus.COMPLETE:
+                event_type = ReactiveEventType.VALIDATION_PASSED
+            else:
+                event_type = ReactiveEventType.VALIDATION_FAILED
+                event_data["errors"] = self.context.validation_errors
+        elif "generation" in agent_name.lower():
+            event_type = ReactiveEventType.GENERATION_COMPLETE
+
+        if event_type:
+            return publish_event(event_type, agent_name, event_data)
+        return []
+
